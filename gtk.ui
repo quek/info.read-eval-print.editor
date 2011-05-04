@@ -12,6 +12,7 @@
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="border_width">1</property>
+            <property name="wrap_mode">char</property>
             <property name="left_margin">2</property>
             <property name="right_margin">2</property>
             <signal name="key_release_event" handler="buffer_text_view_key_release_event_cb"/>
@@ -26,6 +27,7 @@
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="border_width">1</property>
+            <property name="wrap_mode">char</property>
             <property name="left_margin">2</property>
             <property name="right_margin">2</property>
             <signal name="key_release_event" handler="command_text_view_key_release_event_cb"/>

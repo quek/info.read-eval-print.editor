@@ -7,13 +7,15 @@
 (defparameter *src-location* (asdf:component-pathname (asdf:find-system :info.read-eval-print.editor)))
 
 (defvar *editor*)
+(defvar *view*)
+(defvar *buffer*)
 
 (defclass* editor ()
   ((window)
    (buffer-text-view)
    (buffer-key-bindings)
    (command-text-view)
-   (dispatch-tables `((:normal . ,(make-instance 'dispatch-table))
+   (dispatch-tables `((:normal . ,(make-instance 'dispatch-table :default (constantly t)))
                       (:insert . ,(make-instance 'dispatch-table))
                       (:command . ,(make-instance 'dispatch-table))))
    (command-key-bindings)
@@ -21,8 +23,19 @@
 
 (defmethod initialize-instance :after ((editor editor) &rest initargs)
   (declare (ignore initargs))
-  (let ((normal (dispatch-table editor :normal)))
-    (set-command normal '(#\;) 'info.read-eval-print.editor.command::command-mode)))
+  (let ((table (dispatch-table editor :normal)))
+    (set-command table '(#\;) 'info.read-eval-print.editor.command::command-mode)
+    (set-command table '(#\i) 'info.read-eval-print.editor.command::insert-mode)
+    (set-command table '(#\d) 'info.read-eval-print.editor.command::backward-char)
+    (set-command table '(#\h) 'info.read-eval-print.editor.command::next-line)
+    (set-command table '(#\t) 'info.read-eval-print.editor.command::previous-line)
+    (set-command table '(#\n) 'info.read-eval-print.editor.command::forward-char))
+  (let ((table (dispatch-table editor :insert)))
+    (set-command table '(:control #\c) 'info.read-eval-print.editor.command::normal-mode))
+  (let ((table (dispatch-table editor :command)))
+    (set-command table '(:control #\c) 'info.read-eval-print.editor.command::normal-mode)
+    (set-command table '(#\Esc) 'info.read-eval-print.editor.command::normal-mode)))
+
 
 
 (defmethod dispatch-table (editor &optional (mode (mode-of editor)))
@@ -31,13 +44,18 @@
 (defgeneric dispatch-event (dispatch-table sender event))
 
 (defclass* dispatch-table ()
-  ((table :initform (make-hash-table :test #'equal))))
+  ((table (make-hash-table :test #'equal))
+   (default nil)))
 
 
 (defmethod dispatch-event (dispatch-table sender event-key)
-  (awhen (gethash (sort-keyseq (event-key-to-keyseq event-key))
-                  (table-of dispatch-table))
-    (funcall it)))
+  (let ((*view* sender)
+        (*buffer* (text-view-buffer sender)))
+   (awhen (gethash (sort-keyseq (event-key-to-keyseq event-key))
+                   (table-of dispatch-table)
+                   (default-of dispatch-table))
+     (funcall it)
+     t)))
 
 (defun sort-keyseq (keyseq)
   (sort (copy-seq keyseq)
@@ -46,6 +64,10 @@
                    (princ-to-string b)))))
 
 (defmethod set-command (dispatch-table keyseq command)
+  (loop for x in keyseq
+        if (and (keywordp x)
+                (not (member x '(:control :alt :shif :super :hyper))))
+          do (error "invalid keyseq ~a." keyseq))
   (setf (gethash (sort-keyseq keyseq) (table-of dispatch-table)) command))
 
 (defun main ()
@@ -75,8 +97,12 @@
         (widget-show window)))))
 
 (defun event-key-to-keyseq (event-key)
-  (list* (gdk:keyval-to-char (event-key-keyval event-key))
-         (event-key-state event-key)))
+  (loop for x in (list* (gdk:keyval-to-char (event-key-keyval event-key))
+                        (event-key-state event-key))
+        if (eq :control-mask x)
+          collect :control
+        else
+          collect x))
 
 (defun buffer-text-view-key-press-event-cb (buffer-text-view event-key)
   (let ((dispatch-table (dispatch-table *editor*)))
@@ -89,6 +115,9 @@
 
 ;; event は nil を返すとデフォルトのイベントが実行される。
 (defun command-text-view-key-press-event-cb (command-text-view event-key)
+  (let ((dispatch-table (dispatch-table *editor*)))
+    (dispatch-event dispatch-table command-text-view event-key))
+  #+ (or)
   (cond ((= #.(keyval-from-name "Return") (event-key-keyval event-key))
          (run-command (subseq (text-buffer-text (text-view-buffer command-text-view))
                               1)))
