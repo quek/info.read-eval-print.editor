@@ -34,7 +34,9 @@
     (set-command table '(:control #\c) 'info.read-eval-print.editor.command::normal-mode))
   (let ((table (dispatch-table editor :command)))
     (set-command table '(:control #\c) 'info.read-eval-print.editor.command::normal-mode)
-    (set-command table '(#\Esc) 'info.read-eval-print.editor.command::normal-mode)))
+    (set-command table '(#\Esc) 'info.read-eval-print.editor.command::normal-mode)
+    (set-command table '(:control #\m) 'info.read-eval-print.editor.command::run-command)
+    (set-command table '(#\Return) 'info.read-eval-print.editor.command::run-command)))
 
 
 
@@ -97,12 +99,16 @@
         (widget-show window)))))
 
 (defun event-key-to-keyseq (event-key)
-  (loop for x in (list* (gdk:keyval-to-char (event-key-keyval event-key))
+  (loop for x in (list* (event-key-keyval event-key)
                         (event-key-state event-key))
         if (eq :control-mask x)
           collect :control
+        else if (keywordp x)
+               collect x
+        else if (= #.(gdk:keyval-from-name "Return") x)
+               collect #\Return
         else
-          collect x))
+          collect (gdk:keyval-to-char x)))
 
 (defun buffer-text-view-key-press-event-cb (buffer-text-view event-key)
   (let ((dispatch-table (dispatch-table *editor*)))
@@ -116,32 +122,9 @@
 ;; event は nil を返すとデフォルトのイベントが実行される。
 (defun command-text-view-key-press-event-cb (command-text-view event-key)
   (let ((dispatch-table (dispatch-table *editor*)))
-    (dispatch-event dispatch-table command-text-view event-key))
-  #+ (or)
-  (cond ((= #.(keyval-from-name "Return") (event-key-keyval event-key))
-         (run-command (subseq (text-buffer-text (text-view-buffer command-text-view))
-                              1)))
-        ((= #.(keyval-from-name "Escape") (event-key-keyval event-key))
-         (setf (text-buffer-text (text-view-buffer (command-text-view-of *editor*)))
-               "")
-         (widget-grab-focus (buffer-text-view-of *editor*))
-         t)
-        (t nil)))
+    (dispatch-event dispatch-table command-text-view event-key)))
+
 
 (defun command-text-view-key-release-event-cb (command-text-view event-key)
   (declare (ignore command-text-view event-key))
   nil)
-
-(defun run-command (line)
-  (multiple-value-bind (command args) (parse-command line)
-    (apply command args)
-    (setf (text-buffer-text (text-view-buffer (command-text-view-of *editor*)))
-          "")))
-
-(defun parse-command (line)
-  (let ((splited (ppcre:split "\\s" line)))
-    (values (intern (string-upcase (car splited))
-                    :info.read-eval-print.editor.command)
-            (cdr splited))))
-
-

@@ -51,3 +51,15 @@
           (scan-file path #'read-char)))
   (widget-grab-focus (buffer-text-view-of *editor*)))
 
+
+(defun info.read-eval-print.editor.command::quit ()
+  (object-destroy (window-of *editor*)))
+
+(defun info.read-eval-print.editor.command::run-command ()
+  ":open /tmp/a.txt"
+  (let* ((input (text-buffer-text *buffer*))
+         (splited (ppcre:split "\\s" input :start 1 :limit 2)))
+    (info.read-eval-print.editor.command::normal-mode)
+    (apply (find-symbol (string-upcase (car splited))
+                        :info.read-eval-print.editor.command)
+           (cdr splited))))
