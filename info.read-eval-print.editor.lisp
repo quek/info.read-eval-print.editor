@@ -10,54 +10,64 @@
 (defvar *view*)
 (defvar *buffer*)
 
-(defclass* editor ()
-  ((window)
-   (buffer-text-view)
-   (buffer-key-bindings)
-   (command-text-view)
-   (dispatch-tables `((:normal . ,(make-instance 'dispatch-table :default (constantly t)))
-                      (:insert . ,(make-instance 'dispatch-table))
-                      (:command . ,(make-instance 'dispatch-table))))
-   (command-key-bindings)
-   (mode :normal)))
-
-(defmethod initialize-instance :after ((editor editor) &rest initargs)
-  (declare (ignore initargs))
-  (let ((table (dispatch-table editor :normal)))
-    (set-command table '(#\;) 'info.read-eval-print.editor.command::command-mode)
-    (set-command table '(#\i) 'info.read-eval-print.editor.command::insert-mode)
-    (set-command table '(#\d) 'info.read-eval-print.editor.command::backward-char)
-    (set-command table '(#\h) 'info.read-eval-print.editor.command::next-line)
-    (set-command table '(#\t) 'info.read-eval-print.editor.command::previous-line)
-    (set-command table '(#\n) 'info.read-eval-print.editor.command::forward-char))
-  (let ((table (dispatch-table editor :insert)))
-    (set-command table '(:control #\c) 'info.read-eval-print.editor.command::normal-mode))
-  (let ((table (dispatch-table editor :command)))
-    (set-command table '(:control #\c) 'info.read-eval-print.editor.command::normal-mode)
-    (set-command table '(#\Esc) 'info.read-eval-print.editor.command::normal-mode)
-    (set-command table '(:control #\m) 'info.read-eval-print.editor.command::run-command)
-    (set-command table '(#\Return) 'info.read-eval-print.editor.command::run-command)))
-
-
-
-(defmethod dispatch-table (editor &optional (mode (mode-of editor)))
-  (cdr (assoc mode (dispatch-tables-of editor))))
-
 (defgeneric dispatch-event (dispatch-table sender event))
+(defgeneric restore-dispatch-table (temporary-dispatch-table))
 
 (defclass* dispatch-table ()
   ((table (make-hash-table :test #'equal))
    (default nil)))
 
+(defclass* temporary-dispatch-table (dispatch-table)
+  ((dispatch-table-to-restore)
+   (mode)))
 
-(defmethod dispatch-event (dispatch-table sender event-key)
-  (let ((*view* sender)
-        (*buffer* (text-view-buffer sender)))
-   (awhen (gethash (sort-keyseq (event-key-to-keyseq event-key))
-                   (table-of dispatch-table)
-                   (default-of dispatch-table))
-     (funcall it)
-     t)))
+(defmethod restore-dispatch-table ((self temporary-dispatch-table))
+  (setf (dispatch-table *editor* (mode-of self))
+        (dispatch-table-to-restore-of self)))
+
+
+(defvar *normal-dispatch-table*  (make-instance 'dispatch-table :default (constantly t)))
+(defvar *insert-dispatch-table*  (make-instance 'dispatch-table))
+(defvar *command-dispatch-table* (make-instance 'dispatch-table))
+
+(defvar *normal-g-dispatch-table*
+  (make-instance 'temporary-dispatch-table
+                 :mode :normal
+                 :dispatch-table-to-restore *normal-dispatch-table*
+                 :default (constantly t)))
+
+
+
+(defclass* editor ()
+  ((window)
+   (buffer-text-view)
+   (buffer-key-bindings)
+   (command-text-view)
+   (dispatch-tables `((:normal . ,*normal-dispatch-table*)
+                      (:insert . ,*insert-dispatch-table*)
+                      (:command . ,*command-dispatch-table*)))
+   (command-key-bindings)
+   (mode :normal)))
+
+(defmethod (setf dispatch-table) (dispatch-table editor mode)
+  (setf (cdr (assoc mode (dispatch-tables-of editor)))
+        dispatch-table))
+
+(defmethod dispatch-table (editor &optional (mode (mode-of editor)))
+  (cdr (assoc mode (dispatch-tables-of editor))))
+
+
+(defmethod dispatch-event ((dispatch-table dispatch-table) sender event-key)
+  (awhen (gethash (sort-keyseq (event-key-to-keyseq event-key))
+                  (table-of dispatch-table)
+                  (default-of dispatch-table))
+    (funcall it)
+    t))
+
+(defmethod dispatch-event :around ((dispatch-table temporary-dispatch-table) sender event-key)
+  (aprog1 (call-next-method)
+    (when it
+      (restore-dispatch-table dispatch-table))))
 
 (defun sort-keyseq (keyseq)
   (sort (copy-seq keyseq)
@@ -103,15 +113,15 @@
                         (event-key-state event-key))
         if (eq :control-mask x)
           collect :control
-        else if (keywordp x)
-               collect x
-        else if (= #.(gdk:keyval-from-name "Return") x)
-               collect #\Return
-        else
-          collect (gdk:keyval-to-char x)))
+        else if (numberp x)
+               collect (cond ((= #.(gdk:keyval-from-name "Return") x)
+                              #\Return)
+                             (t (gdk:keyval-to-char x)))))
 
 (defun buffer-text-view-key-press-event-cb (buffer-text-view event-key)
-  (let ((dispatch-table (dispatch-table *editor*)))
+  (let ((dispatch-table (dispatch-table *editor*))
+        (*view* buffer-text-view)
+        (*buffer* (text-view-buffer buffer-text-view)))
     (dispatch-event dispatch-table buffer-text-view event-key)))
 
 
@@ -121,7 +131,9 @@
 
 ;; event は nil を返すとデフォルトのイベントが実行される。
 (defun command-text-view-key-press-event-cb (command-text-view event-key)
-  (let ((dispatch-table (dispatch-table *editor*)))
+  (let ((dispatch-table (dispatch-table *editor*))
+        (*view* command-text-view)
+        (*buffer* (text-view-buffer command-text-view)))
     (dispatch-event dispatch-table command-text-view event-key)))
 
 

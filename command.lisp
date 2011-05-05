@@ -44,12 +44,23 @@
     (setf (text-iter-line-offset iter) line-offset)
     (text-buffer-place-cursor *buffer* iter)))
 
+(defun info.read-eval-print.editor.command::beginning-of-buffer ()
+  (let ((iter (text-buffer-get-start-iter *buffer*)))
+    (text-buffer-place-cursor *buffer* iter)))
+
+(defun info.read-eval-print.editor.command::end-of-buffer ()
+  (let ((iter (text-buffer-get-end-iter *buffer*)))
+    (text-buffer-place-cursor *buffer* iter)))
+
 
 (defun info.read-eval-print.editor.command::open (path)
-  (setf (text-buffer-text (text-view-buffer (buffer-text-view-of *editor*)))
-        (collect 'string
-          (scan-file path #'read-char)))
-  (widget-grab-focus (buffer-text-view-of *editor*)))
+  (let ((buffer (text-view-buffer (buffer-text-view-of *editor*))))
+    (setf (text-buffer-text buffer)
+          (collect 'string
+            (scan-file path #'read-char)))
+    (widget-grab-focus (buffer-text-view-of *editor*))
+    (let ((*buffer* buffer))
+      (info.read-eval-print.editor.command::beginning-of-buffer))))
 
 
 (defun info.read-eval-print.editor.command::quit ()
@@ -59,7 +70,35 @@
   ":open /tmp/a.txt"
   (let* ((input (text-buffer-text *buffer*))
          (splited (ppcre:split "\\s" input :start 1 :limit 2)))
-    (info.read-eval-print.editor.command::normal-mode)
-    (apply (find-symbol (string-upcase (car splited))
+    (awhen (find-symbol (string-upcase (car splited))
                         :info.read-eval-print.editor.command)
-           (cdr splited))))
+      (info.read-eval-print.editor.command::normal-mode)
+      (apply it (cdr splited)))))
+
+
+(loop for (keyseq command)
+        in `(((#\;) info.read-eval-print.editor.command::command-mode)
+             ((#\i) info.read-eval-print.editor.command::insert-mode)
+             ((#\d) info.read-eval-print.editor.command::backward-char)
+             ((#\h) info.read-eval-print.editor.command::next-line)
+             ((#\t) info.read-eval-print.editor.command::previous-line)
+             ((#\n) info.read-eval-print.editor.command::forward-char)
+             ((#\G) info.read-eval-print.editor.command::end-of-buffer)
+             ((#\g) ,(lambda () (setf (dispatch-table *editor* :normal) *normal-g-dispatch-table*))))
+      do (set-command *normal-dispatch-table* keyseq command))
+
+(loop for (keyseq command)
+        in `(((:control #\c) info.read-eval-print.editor.command::normal-mode))
+      do (set-command *insert-dispatch-table* keyseq command))
+
+(loop for (keyseq command)
+        in `(((:control #\c) info.read-eval-print.editor.command::normal-mode)
+             ((#\Esc) info.read-eval-print.editor.command::normal-mode)
+             ((:control #\m) info.read-eval-print.editor.command::run-command)
+             ((#\Return) info.read-eval-print.editor.command::run-command))
+      do (set-command *command-dispatch-table* keyseq command))
+
+(loop for (keyseq command)
+      in `(((#\g) info.read-eval-print.editor.command::beginning-of-buffer))
+      do (set-command *normal-g-dispatch-table* keyseq command))
+
