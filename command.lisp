@@ -43,7 +43,8 @@
              ((#\t) info.read-eval-print.editor.command::previous-line)
              ((#\n) info.read-eval-print.editor.command::forward-char)
              ((#\G) info.read-eval-print.editor.command::end-of-buffer)
-             ((#\g) ,(lambda () (setf (dispatch-table *editor* :normal) *normal-g-dispatch-table*))))
+             ((#\g) ,(lambda () (setf (dispatch-table *editor* :normal) *normal-g-dispatch-table*)))
+             ((#\e) info.read-eval-print.editor.command::eval-last-sexp))
       do (set-command *normal-dispatch-table* keyseq command))
 
 (loop for (keyseq command)

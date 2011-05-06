@@ -7,6 +7,12 @@
    (file nil)
    (external-format :utf-8)))
 
+(defmethod slice ((buffer buffer) start end)
+  (text-buffer-slice (object-of buffer) start end))
+
+(defmethod insert ((buffer buffer) (text string))
+  (text-buffer-insert (object-of buffer) text))
+
 (defun text-of (buffer)
   (text-buffer-text (object-of buffer)))
 
@@ -44,6 +50,50 @@
                        :if-exists :supersede
                        :external-format (external-format-of buffer))
     (write-sequence (text-of buffer) out)))
+
+(defun beginning-of-sexp (buffer)
+  )
+
+(defun end-of-sexp (buffer)
+  )
+
+(defun last-sexp (buffer)
+  (let ((end (iter-at-mark buffer)))
+    (if (whitespace-p (text-iter-char end))
+        (loop do (text-iter-move end :direction :backward)
+              if (zerop (text-iter-offset end))
+                do (return)
+              unless (whitespace-p (text-iter-char end))
+                do (progn (text-iter-move end)
+                          (return)))
+        (loop until (whitespace-p (text-iter-char end)) ; stop by #\Nul at end of buffer
+              do (text-iter-move end :direction :forward)))
+    (let ((start (iter-at-mark buffer)))
+      (setf (text-iter-offset start) (text-iter-offset end))
+      (text-iter-move start :direction :backward)
+      (let ((sexp (if (char= #\) (text-iter-char start))
+                      (loop with level = 1
+                            for c = (progn (text-iter-move start :direction :backward)
+                                           (text-iter-char start))
+                            if (zerop (text-iter-offset start))
+                              do (return (slice buffer start end))
+                            if (char= #\) (text-iter-char start))
+                              do (incf level)
+                            else if (char= #\( (text-iter-char start))
+                                   do (decf level)
+                            if (zerop level)
+                              do (return (slice buffer start end)))
+                      (loop do (text-iter-move start :direction :backward)
+                            if (whitespace-p (text-iter-char start))
+                              do (progn (text-iter-move start :direction :forward)
+                                        (return (slice buffer start end)))
+                            if (zerop (text-iter-offset start))
+                              do (return (slice buffer start end))))))
+        (let ((result (princ-to-string (eval (read-from-string sexp)))))
+          (insert buffer result))))))
+
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; command
@@ -86,3 +136,6 @@
 (defun info.read-eval-print.editor.command::w ()
   (let ((*buffer* (current-buffer-of *editor*)))
    (save-buffer *buffer*)))
+
+(defun info.read-eval-print.editor.command::eval-last-sexp ()
+  (step (last-sexp *buffer*)))

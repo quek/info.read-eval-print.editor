@@ -3,6 +3,7 @@
 (asdf:defsystem :info.read-eval-print.editor
   :serial t
   :components ((:file "package")
+               (:file "util")
                (:file "buffer")
                (:file "info.read-eval-print.editor")
                (:file "command"))
