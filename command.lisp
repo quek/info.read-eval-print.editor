@@ -42,6 +42,8 @@
              ((#\h) info.read-eval-print.editor.command::next-line)
              ((#\t) info.read-eval-print.editor.command::previous-line)
              ((#\n) info.read-eval-print.editor.command::forward-char)
+             ((#\w) info.read-eval-print.editor.command::forward-sexp)
+             ((#\b) info.read-eval-print.editor.command::backward-sexp)
              ((#\G) info.read-eval-print.editor.command::end-of-buffer)
              ((#\g) ,(lambda () (setf (dispatch-table *editor* :normal) *normal-g-dispatch-table*)))
              ((#\e) info.read-eval-print.editor.command::eval-last-sexp))
