@@ -42,6 +42,8 @@
   ((window)
    (buffer-text-view)
    (buffer-key-bindings)
+   (current-buffer)
+   (mini-buffer)
    (command-text-view)
    (dispatch-tables `((:normal . ,*normal-dispatch-table*)
                       (:insert . ,*insert-dispatch-table*)
@@ -92,7 +94,14 @@
         (setf *editor* (make-instance 'editor
                                       :window window
                                       :buffer-text-view buffer-text-view
-                                      :command-text-view command-text-view))
+                                      :current-buffer (make-instance 'buffer
+                                                                     :object (text-view-buffer buffer-text-view)
+                                                                     :view buffer-text-view)
+                                      :command-text-view command-text-view
+                                      :mini-buffer (make-instance 'buffer
+                                                                  :object (text-view-buffer command-text-view)
+                                                                  :view command-text-view
+                                                                  :name "mini buffer")))
         (builder-connect-signals-simple
          builder
          `(("buffer_text_view_key_press_event_cb"
@@ -121,7 +130,7 @@
 (defun buffer-text-view-key-press-event-cb (buffer-text-view event-key)
   (let ((dispatch-table (dispatch-table *editor*))
         (*view* buffer-text-view)
-        (*buffer* (text-view-buffer buffer-text-view)))
+        (*buffer* (current-buffer-of *editor*)))
     (dispatch-event dispatch-table buffer-text-view event-key)))
 
 
@@ -133,7 +142,7 @@
 (defun command-text-view-key-press-event-cb (command-text-view event-key)
   (let ((dispatch-table (dispatch-table *editor*))
         (*view* command-text-view)
-        (*buffer* (text-view-buffer command-text-view)))
+        (*buffer* (mini-buffer-of *editor*)))
     (dispatch-event dispatch-table command-text-view event-key)))
 
 
