@@ -4,3 +4,7 @@
 
 (defun whitespace-p (char)
   (member char *whitespace*))
+
+(defun sexp-end-p (char)
+  (or (whitespace-p char)
+      (char= char #\))))
