@@ -35,6 +35,11 @@
                  :dispatch-table-to-restore *normal-dispatch-table*
                  :default (constantly t)))
 
+(defvar *normal-y-dispatch-table*
+  (make-instance 'temporary-dispatch-table
+                 :mode :normal
+                 :dispatch-table-to-restore *normal-dispatch-table*
+                 :default (constantly t)))
 
 
 (defclass* editor ()

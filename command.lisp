@@ -38,9 +38,9 @@
   (setf (digit-argument-of *buffer*) n))
 
 (let ((*package* (find-package :info.read-eval-print.editor.command)))
- (loop for i from 0 to 9
-       do (eval `(defun ,(sym 'info.read-eval-print.editor.command::digit-argument- i) ()
-                   (info.read-eval-print.editor.command::digit-argument-n ,i)))))
+  (loop for i from 0 to 9
+        do (eval `(defun ,(sym 'info.read-eval-print.editor.command::digit-argument- i) ()
+                    (info.read-eval-print.editor.command::digit-argument-n ,i)))))
 
 ;; normal
 (loop for (keyseq command)
@@ -53,7 +53,6 @@
              ((#\w) info.read-eval-print.editor.command::forward-sexp)
              ((#\b) info.read-eval-print.editor.command::backward-sexp)
              ((#\G) info.read-eval-print.editor.command::end-of-buffer)
-             ((#\g) ,(lambda () (setf (dispatch-table *editor* :normal) *normal-g-dispatch-table*)))
              ((#\x) info.read-eval-print.editor.command::delete-char)
              ((#\0) info.read-eval-print.editor.command::digit-argument-0)
              ((#\1) info.read-eval-print.editor.command::digit-argument-1)
@@ -65,7 +64,10 @@
              ((#\7) info.read-eval-print.editor.command::digit-argument-7)
              ((#\8) info.read-eval-print.editor.command::digit-argument-8)
              ((#\9) info.read-eval-print.editor.command::digit-argument-9)
-             ((#\e) info.read-eval-print.editor.command::eval-last-sexp))
+             ((#\p) info.read-eval-print.editor.command::paste-below-cursor)
+             ((#\e) info.read-eval-print.editor.command::eval-last-sexp)
+             ((#\g) ,(lambda () (setf (dispatch-table *editor* :normal) *normal-g-dispatch-table*)))
+             ((#\y) ,(lambda () (setf (dispatch-table *editor* :normal) *normal-y-dispatch-table*))))
       do (set-command *normal-dispatch-table* keyseq command))
 
 ;; insert
@@ -83,5 +85,10 @@
 
 ;; normal - g
 (loop for (keyseq command)
-      in `(((#\g) info.read-eval-print.editor.command::beginning-of-buffer))
+        in `(((#\g) info.read-eval-print.editor.command::beginning-of-buffer))
       do (set-command *normal-g-dispatch-table* keyseq command))
+
+;; normal - y
+(loop for (keyseq command)
+        in `(((#\y) info.read-eval-print.editor.command::yank-current-line))
+      do (set-command *normal-y-dispatch-table* keyseq command))

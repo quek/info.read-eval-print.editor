@@ -10,6 +10,7 @@
    (view)
    (name nil)
    (file nil)
+   (yank "AAAA")
    (digit-argument nil :accessor nil)
    (external-format :utf-8)))
 
@@ -30,8 +31,8 @@
 (defmethod slice ((buffer buffer) start end)
   (text-buffer-slice (object-of buffer) start end))
 
-(defmethod insert ((buffer buffer) (text string))
-  (text-buffer-insert (object-of buffer) text))
+(defmethod insert ((buffer buffer) (text string) &key (position :cursor))
+  (text-buffer-insert (object-of buffer) text :position position))
 
 (defun text-of (buffer)
   (text-buffer-text (object-of buffer)))
@@ -184,10 +185,26 @@
 
 
 (defun info.read-eval-print.editor.command::delete-char (&optional (count *digit-argument*))
-  (let* ((start (iter-at-mark *buffer*))
-         (end (iter-at-mark *buffer*)))
-    (text-iter-move end)
+  (let ((start (iter-at-mark *buffer*))
+        (end (iter-at-mark *buffer*)))
+    (text-iter-move end :count count)
     (text-buffer-delete (object-of *buffer*) start end)))
+
+
+(defun info.read-eval-print.editor.command::yank-current-line (&optional (count *digit-argument*))
+  (let ((start (iter-at-mark *buffer*))
+        (end (iter-at-mark *buffer*)))
+    (setf (text-iter-line-offset start) 0)
+    (dotimes (i (1- count))
+      (text-iter-move end :count count :by :line))
+    (text-iter-forward-to-line-end end)
+    (setf (yank-of *buffer*) (slice *buffer* start end))))
+
+(defun info.read-eval-print.editor.command::paste-below-cursor (&optional (count *digit-argument*))
+  (let ((iter (iter-at-mark *buffer*)))
+    (setf (text-iter-line-offset iter) 0)
+    (dotimes (i count)
+      (insert *buffer* (format nil "~a~%" (yank-of *buffer*)) :position iter))))
 
 (defun info.read-eval-print.editor.command::w ()
   (let ((*buffer* (current-buffer-of *editor*)))
