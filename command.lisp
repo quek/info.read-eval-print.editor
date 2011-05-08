@@ -34,7 +34,7 @@
       (info.read-eval-print.editor.command::normal-mode)
       (apply it (cdr splited)))))
 
-
+;; normal
 (loop for (keyseq command)
         in `(((#\;) info.read-eval-print.editor.command::command-mode)
              ((#\i) info.read-eval-print.editor.command::insert-mode)
@@ -46,13 +46,16 @@
              ((#\b) info.read-eval-print.editor.command::backward-sexp)
              ((#\G) info.read-eval-print.editor.command::end-of-buffer)
              ((#\g) ,(lambda () (setf (dispatch-table *editor* :normal) *normal-g-dispatch-table*)))
+             ((#\x) info.read-eval-print.editor.command::delete-char)
              ((#\e) info.read-eval-print.editor.command::eval-last-sexp))
       do (set-command *normal-dispatch-table* keyseq command))
 
+;; insert
 (loop for (keyseq command)
         in `(((:control #\c) info.read-eval-print.editor.command::normal-mode))
       do (set-command *insert-dispatch-table* keyseq command))
 
+;; command
 (loop for (keyseq command)
         in `(((:control #\c) info.read-eval-print.editor.command::normal-mode)
              ((#\Esc) info.read-eval-print.editor.command::normal-mode)
@@ -60,6 +63,7 @@
              ((#\Return) info.read-eval-print.editor.command::run-command))
       do (set-command *command-dispatch-table* keyseq command))
 
+;; normal - g
 (loop for (keyseq command)
       in `(((#\g) info.read-eval-print.editor.command::beginning-of-buffer))
       do (set-command *normal-g-dispatch-table* keyseq command))

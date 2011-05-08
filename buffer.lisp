@@ -168,3 +168,10 @@
   (let ((iter (iter-at-mark *buffer*)))
     (backward-sexp iter count)
     (place-cursor *buffer* iter)))
+
+
+(defun info.read-eval-print.editor.command::delete-char (&optional (count 1))
+  (let* ((start (iter-at-mark *buffer*))
+         (end (iter-at-mark *buffer*)))
+    (text-iter-move end)
+    (text-buffer-delete (object-of *buffer*) start end)))
