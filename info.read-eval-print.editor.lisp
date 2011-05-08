@@ -8,7 +8,6 @@
 
 (defvar *editor*)
 (defvar *view*)
-(defvar *buffer*)
 
 (defgeneric dispatch-event (dispatch-table sender event))
 (defgeneric restore-dispatch-table (temporary-dispatch-table))

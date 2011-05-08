@@ -1,11 +1,31 @@
 (in-package :info.read-eval-print.editor)
 
+(defvar *buffer*)
+
+(define-symbol-macro *digit-argument*
+    (or (digit-argument-of *buffer*) 1))
+
 (defclass* buffer ()
   ((object)
    (view)
    (name nil)
    (file nil)
+   (digit-argument nil :accessor nil)
    (external-format :utf-8)))
+
+(defmethod digit-argument-of ((buffer buffer))
+  (with-slots (digit-argument) buffer
+    (prog1 digit-argument
+      (setf digit-argument nil))))
+
+(defmethod (setf digit-argument-of) ((number number) (buffer buffer))
+  (with-slots (digit-argument) buffer
+    (if digit-argument
+        (setf digit-argument (+ (* digit-argument 10) number))
+        (setf digit-argument number))))
+
+(defmethod (setf digit-argument-of) ((char character) (buffer buffer))
+  (setf (digit-argument-of buffer) (- (char-code char) (char-code #\0))))
 
 (defmethod slice ((buffer buffer) start end)
   (text-buffer-slice (object-of buffer) start end))
@@ -117,29 +137,29 @@
 ;;;; command
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun info.read-eval-print.editor.command::backward-char (&optional (n 1))
+(defun info.read-eval-print.editor.command::backward-char (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))
-    (text-iter-move iter :count n :direction :backward)
+    (text-iter-move iter :count count :direction :backward)
     (place-cursor *buffer* iter)))
 
-(defun info.read-eval-print.editor.command::forward-char (&optional (n 1))
+(defun info.read-eval-print.editor.command::forward-char (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))
-    (text-iter-move iter :count n :direction :forward)
+    (text-iter-move iter :count count :direction :forward)
     (place-cursor *buffer* iter)))
 
-(defun info.read-eval-print.editor.command::next-line (&optional (n 1))
+(defun info.read-eval-print.editor.command::next-line (&optional (count *digit-argument*))
   (let* ((iter (iter-at-mark *buffer*))
          (line-offset (text-iter-line-offset iter)))
-    (loop repeat n do (text-view-forward-display-line (view-of *buffer*) iter))
+    (loop repeat count do (text-view-forward-display-line (view-of *buffer*) iter))
     (setf (text-iter-line-offset iter) line-offset)
     (when (/= line-offset (text-iter-line-offset iter))
       (text-view-forward-display-line-end *view* iter))
     (place-cursor *buffer* iter)))
 
-(defun info.read-eval-print.editor.command::previous-line (&optional (n 1))
+(defun info.read-eval-print.editor.command::previous-line (&optional (count *digit-argument*))
   (let* ((iter (iter-at-mark *buffer*))
          (line-offset (text-iter-line-offset iter)))
-    (loop repeat n do (text-view-backward-display-line (view-of *buffer*) iter))
+    (loop repeat count do (text-view-backward-display-line (view-of *buffer*) iter))
     (setf (text-iter-line-offset iter) line-offset)
     (place-cursor *buffer* iter)))
 
@@ -151,27 +171,27 @@
   (let ((iter (end-iter *buffer*)))
     (place-cursor *buffer* iter)))
 
+(defun info.read-eval-print.editor.command::forward-sexp (&optional (count *digit-argument*))
+  (let ((iter (iter-at-mark *buffer*)))
+    (forward-sexp iter count )
+    (place-cursor *buffer* iter)))
+
+
+(defun info.read-eval-print.editor.command::backward-sexp (&optional (count *digit-argument*))
+  (let ((iter (iter-at-mark *buffer*)))
+    (backward-sexp iter count)
+    (place-cursor *buffer* iter)))
+
+
+(defun info.read-eval-print.editor.command::delete-char (&optional (count *digit-argument*))
+  (let* ((start (iter-at-mark *buffer*))
+         (end (iter-at-mark *buffer*)))
+    (text-iter-move end)
+    (text-buffer-delete (object-of *buffer*) start end)))
+
 (defun info.read-eval-print.editor.command::w ()
   (let ((*buffer* (current-buffer-of *editor*)))
    (save-buffer *buffer*)))
 
 (defun info.read-eval-print.editor.command::eval-last-sexp ()
   (last-sexp *buffer*))
-
-(defun info.read-eval-print.editor.command::forward-sexp (&optional (count 1))
-  (let ((iter (iter-at-mark *buffer*)))
-    (forward-sexp iter count )
-    (place-cursor *buffer* iter)))
-
-
-(defun info.read-eval-print.editor.command::backward-sexp (&optional (count 1))
-  (let ((iter (iter-at-mark *buffer*)))
-    (backward-sexp iter count)
-    (place-cursor *buffer* iter)))
-
-
-(defun info.read-eval-print.editor.command::delete-char (&optional (count 1))
-  (let* ((start (iter-at-mark *buffer*))
-         (end (iter-at-mark *buffer*)))
-    (text-iter-move end)
-    (text-buffer-delete (object-of *buffer*) start end)))
