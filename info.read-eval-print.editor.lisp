@@ -129,6 +129,8 @@
         else if (numberp x)
                collect (cond ((= #.(gdk:keyval-from-name "Return") x)
                               #\Return)
+                             ((= #.(gdk:keyval-from-name "Escape") x)
+                              #\Esc)
                              (t (gdk:keyval-to-char x)))))
 
 (defun buffer-text-view-key-press-event-cb (buffer-text-view event-key)

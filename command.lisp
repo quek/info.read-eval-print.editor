@@ -15,6 +15,9 @@
   (setf (mode-of *editor*) :insert)
   (widget-grab-focus (buffer-text-view-of *editor*)))
 
+(defun info.read-eval-print.editor.command::a-insert-mode ()
+  (info.read-eval-print.editor.command::forward-char)
+  (info.read-eval-print.editor.command::insert-mode))
 
 (defun info.read-eval-print.editor.command::e (path)
   (let ((*buffer* (current-buffer-of *editor*)))
@@ -44,12 +47,14 @@
 
 ;; normal
 (loop for (keyseq command)
-        in `(((#\;) info.read-eval-print.editor.command::command-mode)
+        in `(((#\:) info.read-eval-print.editor.command::command-mode)
              ((#\i) info.read-eval-print.editor.command::insert-mode)
-             ((#\d) info.read-eval-print.editor.command::backward-char)
-             ((#\h) info.read-eval-print.editor.command::next-line)
-             ((#\t) info.read-eval-print.editor.command::previous-line)
-             ((#\n) info.read-eval-print.editor.command::forward-char)
+             ((#\a) info.read-eval-print.editor.command::a-insert-mode)
+             ((#\o) info.read-eval-print.editor.command::o-insert-mode)
+             ((#\h) info.read-eval-print.editor.command::backward-char)
+             ((#\j) info.read-eval-print.editor.command::next-line)
+             ((#\k) info.read-eval-print.editor.command::previous-line)
+             ((#\l) info.read-eval-print.editor.command::forward-char)
              ((#\w) info.read-eval-print.editor.command::forward-sexp)
              ((#\b) info.read-eval-print.editor.command::backward-sexp)
              ((#\G) info.read-eval-print.editor.command::end-of-buffer)
@@ -72,12 +77,15 @@
 
 ;; insert
 (loop for (keyseq command)
-        in `(((:control #\c) info.read-eval-print.editor.command::normal-mode))
+        in `(((:control #\c) info.read-eval-print.editor.command::normal-mode)
+             ((:control #\[) info.read-eval-print.editor.command::normal-mode)
+             ((#\Esc) info.read-eval-print.editor.command::normal-mode))
       do (set-command *insert-dispatch-table* keyseq command))
 
 ;; command
 (loop for (keyseq command)
         in `(((:control #\c) info.read-eval-print.editor.command::normal-mode)
+             ((:control #\[) info.read-eval-print.editor.command::normal-mode)
              ((#\Esc) info.read-eval-print.editor.command::normal-mode)
              ((:control #\m) info.read-eval-print.editor.command::run-command)
              ((#\Return) info.read-eval-print.editor.command::run-command))
