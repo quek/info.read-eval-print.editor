@@ -2,9 +2,10 @@
 
 (asdf:defsystem :info.read-eval-print.editor
   :serial t
-  :components ((:file "package")
+  :components ((:file "gtk-source-view")
+               (:file "package")
                (:file "util")
                (:file "buffer")
-               (:file "info.read-eval-print.editor")
+               (:file "gui")
                (:file "command"))
   :depends-on (:cl-gtk2-gtk :cl-ppcre :hu.dwim.defclass-star :quek))

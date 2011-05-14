@@ -3,17 +3,17 @@
 
 (defun info.read-eval-print.editor.command::command-mode ()
   (setf (mode-of *editor*) :command)
-  (setf (text-buffer-text (text-view-buffer (command-text-view-of *editor*))) ":")
-  (widget-grab-focus (command-text-view-of *editor*)))
+  (setf (text-buffer-text (text-view-buffer (command-view-of *editor*))) ":")
+  (widget-grab-focus (command-view-of *editor*)))
 
 (defun info.read-eval-print.editor.command::normal-mode ()
   (setf (mode-of *editor*) :normal)
-  (setf (text-buffer-text (text-view-buffer (command-text-view-of *editor*))) "")
-  (widget-grab-focus (buffer-text-view-of *editor*)))
+  (setf (text-buffer-text (text-view-buffer (command-view-of *editor*))) "")
+  (widget-grab-focus (buffer-view-of *editor*)))
 
 (defun info.read-eval-print.editor.command::insert-mode ()
   (setf (mode-of *editor*) :insert)
-  (widget-grab-focus (buffer-text-view-of *editor*)))
+  (widget-grab-focus (buffer-view-of *editor*)))
 
 (defun info.read-eval-print.editor.command::a-insert-mode ()
   (info.read-eval-print.editor.command::forward-char)
@@ -29,7 +29,7 @@
   (object-destroy (window-of *editor*)))
 
 (defun info.read-eval-print.editor.command::run-command ()
-  ":open /tmp/a.txt"
+  ":e /tmp/a.txt"
   (let* ((input (text-of *buffer*))
          (splited (ppcre:split "\\s" input :start 1 :limit 2)))
     (awhen (find-symbol (string-upcase (car splited))

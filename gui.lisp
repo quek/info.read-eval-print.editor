@@ -1,13 +1,9 @@
-;;;; info.read-eval-print.editor.lisp
-
 (in-package :info.read-eval-print.editor)
-
-;;; "info.read-eval-print.editor" goes here. Hacks and glory await!
-
-(defparameter *src-location* (asdf:component-pathname (asdf:find-system :info.read-eval-print.editor)))
 
 (defvar *editor*)
 (defvar *view*)
+
+
 
 (defgeneric dispatch-event (dispatch-table sender event))
 (defgeneric restore-dispatch-table (temporary-dispatch-table))
@@ -44,11 +40,11 @@
 
 (defclass* editor ()
   ((window)
-   (buffer-text-view)
+   (buffer-view)
    (buffer-key-bindings)
    (current-buffer)
-   (mini-buffer)
-   (command-text-view)
+   (command-buffer)
+   (command-view)
    (dispatch-tables `((:normal . ,*normal-dispatch-table*)
                       (:insert . ,*insert-dispatch-table*)
                       (:command . ,*command-dispatch-table*)))
@@ -61,7 +57,6 @@
 
 (defmethod dispatch-table (editor &optional (mode (mode-of editor)))
   (cdr (assoc mode (dispatch-tables-of editor))))
-
 
 (defmethod dispatch-event ((dispatch-table dispatch-table) sender event-key)
   (awhen (gethash (sort-keyseq (event-key-to-keyseq event-key))
@@ -88,38 +83,6 @@
           do (error "invalid keyseq ~a." keyseq))
   (setf (gethash (sort-keyseq keyseq) (table-of dispatch-table)) command))
 
-(defun main ()
-  (with-main-loop
-    (let ((builder (make-instance 'builder)))
-      (builder-add-from-file builder (namestring (merge-pathnames "gtk.ui" *src-location*)))
-      (let* ((window (builder-get-object builder "main_window"))
-             (buffer-text-view (builder-get-object builder "buffer_text_view"))
-             (command-text-view (builder-get-object builder "command_text_view")))
-        (setf *editor* (make-instance 'editor
-                                      :window window
-                                      :buffer-text-view buffer-text-view
-                                      :current-buffer (make-instance 'buffer
-                                                                     :object (text-view-buffer buffer-text-view)
-                                                                     :view buffer-text-view)
-                                      :command-text-view command-text-view
-                                      :mini-buffer (make-instance 'buffer
-                                                                  :object (text-view-buffer command-text-view)
-                                                                  :view command-text-view
-                                                                  :name "mini buffer")))
-        (builder-connect-signals-simple
-         builder
-         `(("buffer_text_view_key_press_event_cb"
-            buffer-text-view-key-press-event-cb)
-           ("buffer_text_view_key_release_event_cb"
-            buffer-text-view-key-release-event-cb)
-           ("command_text_view_key_press_event_cb"
-            command-text-view-key-press-event-cb)
-           ("command_text_view_key_release_event_cb"
-            command-text-view-key-release-event-cb)))
-        (connect-signal window
-                        "destroy"
-                        (lambda (w) (declare (ignore w)) (leave-gtk-main)))
-        (widget-show window)))))
 
 (defun event-key-to-keyseq (event-key)
   (loop for x in (list* (event-key-keyval event-key)
@@ -148,10 +111,52 @@
 (defun command-text-view-key-press-event-cb (command-text-view event-key)
   (let ((dispatch-table (dispatch-table *editor*))
         (*view* command-text-view)
-        (*buffer* (mini-buffer-of *editor*)))
+        (*buffer* (command-buffer-of *editor*)))
     (dispatch-event dispatch-table command-text-view event-key)))
 
 
 (defun command-text-view-key-release-event-cb (command-text-view event-key)
   (declare (ignore command-text-view event-key))
   nil)
+
+
+
+
+(defun main ()
+  (with-main-loop
+    (let-ui (gtk-window :type :toplevel
+                        :position :center
+                        :title "Editor"
+                        :default-width 300
+                        :default-height 400
+                        :var window
+                        (v-box
+                         (scrolled-window
+                          :hscrollbar-policy :automatic
+                          :vscrollbar-policy :automatic
+                          :shadow-type :etched-in
+                          (source-view :var buffer-view
+                                       :buffer (make-instance 'source-buffer)))
+                         :expand t
+                         (source-view :var command-view)
+                         :expand nil))
+      (setf *editor* (make-instance 'editor
+                                    :window window
+                                    :buffer-view buffer-view
+                                    :current-buffer (make-instance 'buffer
+                                                                   :object (source-view-buffer buffer-view)
+                                                                   :view buffer-view)
+                                    :command-view command-view
+                                    :command-buffer (make-instance 'buffer
+                                                                   :object (source-view-buffer command-view)
+                                                                   :view command-view
+                                                                   :name "command buffer")))
+
+      (connect-signal window "destroy" (lambda (w) (declare (ignore w)) (leave-gtk-main)))
+      (connect-signal buffer-view "key-press-event" 'buffer-text-view-key-press-event-cb)
+      (connect-signal buffer-view "key-release-event" 'buffer-text-view-key-release-event-cb)
+      (connect-signal command-view "key-press-event" 'command-text-view-key-press-event-cb)
+      (connect-signal command-view "key-release-event" 'command-text-view-key-release-event-cb)
+
+      (widget-show window)))
+  )
