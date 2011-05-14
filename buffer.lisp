@@ -190,6 +190,11 @@
     (text-iter-move end :count count)
     (text-buffer-delete (object-of *buffer*) start end)))
 
+(defun info.read-eval-print.editor.command::backward-delete-char (&optional (count *digit-argument*))
+  (let ((start (iter-at-mark *buffer*))
+        (end (iter-at-mark *buffer*)))
+    (text-iter-move start :count count :direction :backward)
+    (text-buffer-delete (object-of *buffer*) start end)))
 
 (defun info.read-eval-print.editor.command::yank-current-line (&optional (count *digit-argument*))
   (let ((start (iter-at-mark *buffer*))
@@ -209,6 +214,14 @@
 (defun info.read-eval-print.editor.command::w ()
   (let ((*buffer* (current-buffer-of *editor*)))
    (save-buffer *buffer*)))
+
+(defun info.read-eval-print.editor.command::undo (&optional (count *digit-argument*))
+  (dotimes (i count)
+    (source-buffer-undo (object-of *buffer*))))
+
+(defun info.read-eval-print.editor.command::redo (&optional (count *digit-argument*))
+  (dotimes (i count)
+    (source-buffer-redo (object-of *buffer*))))
 
 (defun info.read-eval-print.editor.command::eval-last-sexp ()
   (last-sexp *buffer*))

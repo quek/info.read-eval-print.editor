@@ -96,3 +96,13 @@
 
 (defcfun (source-view-new "gtk_source_view_new") (g-object source-buffer)
   (source-view (g-object source-view)))
+(export 'source-view-new)
+
+(defcfun (source-buffer-undo "gtk_source_buffer_undo") :void
+  (buffer (g-object source-buffer)))
+(export 'source-buffer-undo)
+
+(defcfun (source-buffer-redo "gtk_source_buffer_redo") :void
+  (buffer (g-object source-buffer)))
+(export 'source-buffer-redo)
+
