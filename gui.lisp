@@ -136,21 +136,22 @@
                           :vscrollbar-policy :automatic
                           :shadow-type :etched-in
                           (source-view :var buffer-view
-                                       :buffer (make-instance 'source-buffer)))
+                                       :buffer (change-class (make-instance 'source-buffer)
+                                                             'buffer)))
                          :expand t
-                         (source-view :var command-view)
+                         (source-view :var command-view
+                                      :buffer (change-class (make-instance 'source-buffer)
+                                                            'buffer
+                                                            :name "command buffer"))
                          :expand nil))
+      (setf (view-of (source-view-buffer buffer-view)) buffer-view
+            (view-of (source-view-buffer command-view)) command-view)
       (setf *editor* (make-instance 'editor
                                     :window window
                                     :buffer-view buffer-view
-                                    :current-buffer (make-instance 'buffer
-                                                                   :object (source-view-buffer buffer-view)
-                                                                   :view buffer-view)
+                                    :current-buffer (source-view-buffer buffer-view)
                                     :command-view command-view
-                                    :command-buffer (make-instance 'buffer
-                                                                   :object (source-view-buffer command-view)
-                                                                   :view command-view
-                                                                   :name "command buffer")))
+                                    :command-buffer (source-view-buffer command-view)))
 
       (connect-signal window "destroy" (lambda (w) (declare (ignore w)) (leave-gtk-main)))
       (connect-signal buffer-view "key-press-event" 'buffer-text-view-key-press-event-cb)
@@ -158,5 +159,4 @@
       (connect-signal command-view "key-press-event" 'command-text-view-key-press-event-cb)
       (connect-signal command-view "key-release-event" 'command-text-view-key-release-event-cb)
 
-      (widget-show window)))
-  )
+      (widget-show window))))
