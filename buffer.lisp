@@ -56,18 +56,7 @@
 (defmethod find-file (buffer file)
   (setf (file-of buffer) file)
   (setf (name-of buffer) (file-namestring file))
-  (awhen (guess-language (gtk-source-language-manager-get-default)
-                         file
-                         (cffi-sys:null-pointer))
-    (setf (source-buffer-language buffer) it))
-  (print (source-language-name (source-buffer-language buffer)))
-  (setf (source-buffer-style-scheme buffer)
-        (gtk-source-style-scheme-manager-get-scheme
-         (gtk-source-style-scheme-manager-get-default)
-         "kate"))
-  (print (let ((x (source-buffer-style-scheme buffer)))
-           (list (source-style-scheme-name x)
-                 (source-style-scheme-description x))))
+  (guess-language buffer)
   (if (probe-file file)
       (progn
         (setf (text-of buffer)
@@ -76,6 +65,19 @@
         (setf (text-of buffer) "")))
   (let ((*buffer* buffer))
     (info.read-eval-print.editor.command::beginning-of-buffer)))
+
+(defmethod guess-language ((buffer buffer))
+  (awhen (gtk-source-language-manager-guess-language
+          (gtk-source-language-manager-get-default)
+          (string (file-of buffer))
+          (cffi-sys:null-pointer))
+    (setf (source-buffer-language buffer) it)))
+
+(defmethod (setf style-scheme) (style-scheme-id (buffer buffer))
+  (setf (source-buffer-style-scheme buffer)
+        (gtk-source-style-scheme-manager-get-scheme
+         (gtk-source-style-scheme-manager-get-default)
+         style-scheme-id)))
 
 (defun save-buffer (buffer)
   (with-open-file (out (file-of buffer)
@@ -180,11 +182,13 @@
 
 (defun info.read-eval-print.editor.command::beginning-of-buffer ()
   (let ((iter (start-iter *buffer*)))
-    (place-cursor *buffer* iter)))
+    (place-cursor *buffer* iter)
+    (text-view-scroll-to-iter (view-of *buffer*) iter)))
 
 (defun info.read-eval-print.editor.command::end-of-buffer ()
   (let ((iter (end-iter *buffer*)))
-    (place-cursor *buffer* iter)))
+    (place-cursor *buffer* iter)
+    (text-view-scroll-to-iter (view-of *buffer*) iter)))
 
 (defun info.read-eval-print.editor.command::forward-sexp (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))

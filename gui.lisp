@@ -144,9 +144,13 @@
                                                             'buffer
                                                             :name "command buffer"))
                          :expand nil))
-      (setf (view-of (source-view-buffer buffer-view)) buffer-view
-            (show-line-numbers buffer-view) t
-            (view-of (source-view-buffer command-view)) command-view)
+      (let ((sb (source-view-buffer buffer-view))
+            (cb (source-view-buffer command-view)))
+        (setf (view-of sb) buffer-view
+              (show-line-numbers buffer-view) t
+              (style-scheme sb) "oblivion"
+              (view-of cb) command-view
+              (style-scheme cb) "oblivion"))
       (setf *editor* (make-instance 'editor
                                     :window window
                                     :buffer-view buffer-view

@@ -125,11 +125,11 @@
   (dirs gstrv))
 (export 'gtk-source-language-manager-set-search-path)
 
-(defcfun (guess-language "gtk_source_language_manager_guess_language") (g-object source-language)
+(defcfun gtk-source-language-manager-guess-language (g-object source-language)
   (lm :pointer)
   (file-name (:string :free-to-foreign t))
   (contet-type (:string :free-to-foreign t)))
-(export 'guess-language)
+(export 'gtk-source-language-manager-guess-language)
 
 
 (defcfun gtk-source-style-scheme-manager-get-default :pointer)
