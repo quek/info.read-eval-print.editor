@@ -54,14 +54,26 @@
   (text-buffer-get-end-iter buffer))
 
 (defmethod find-file (buffer file)
+  (setf (file-of buffer) file)
+  (setf (name-of buffer) (file-namestring file))
+  (awhen (guess-language (gtk-source-language-manager-get-default)
+                         file
+                         (cffi-sys:null-pointer))
+    (setf (source-buffer-language buffer) it))
+  (print (source-language-name (source-buffer-language buffer)))
+  (setf (source-buffer-style-scheme buffer)
+        (gtk-source-style-scheme-manager-get-scheme
+         (gtk-source-style-scheme-manager-get-default)
+         "kate"))
+  (print (let ((x (source-buffer-style-scheme buffer)))
+           (list (source-style-scheme-name x)
+                 (source-style-scheme-description x))))
   (if (probe-file file)
       (progn
         (setf (text-of buffer)
               (collect 'string (scan-file file #'read-char))))
       (progn
         (setf (text-of buffer) "")))
-  (setf (file-of buffer) file)
-  (setf (name-of buffer) (file-namestring file))
   (let ((*buffer* buffer))
     (info.read-eval-print.editor.command::beginning-of-buffer)))
 

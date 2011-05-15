@@ -106,3 +106,36 @@
   (buffer (g-object source-buffer)))
 (export 'source-buffer-redo)
 
+
+(defcfun gtk-source-language-manager-get-default :pointer)
+(export 'gtk-source-language-manager-get-default)
+
+(defcfun gtk-source-language-manager-get-search-path (gstrv :free-from-foreign nil)
+  (lm :pointer))
+(export 'gtk-source-language-manager-get-search-path)
+
+(defcfun gtk-source-language-manager-set-search-path :void
+  (lm :pointer)
+  (dirs gstrv))
+(export 'gtk-source-language-manager-set-search-path)
+
+(defcfun (guess-language "gtk_source_language_manager_guess_language") (g-object source-language)
+  (lm :pointer)
+  (file-name (:string :free-to-foreign t))
+  (contet-type (:string :free-to-foreign t)))
+(export 'guess-language)
+
+
+(defcfun gtk-source-style-scheme-manager-get-default :pointer)
+(export 'gtk-source-style-scheme-manager-get-default)
+
+(defcfun gtk-source-style-scheme-manager-get-scheme (g-object source-style-scheme)
+  (manager :pointer)
+  (scheme-id :string))
+(export 'gtk-source-style-scheme-manager-get-scheme)
+
+#+ba
+(guess-language (gtk-source-language-manager-get-default)
+                "a.c"
+                (cffi-sys:null-pointer  ); "application/x-c"
+                )

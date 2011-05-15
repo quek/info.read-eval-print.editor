@@ -49,7 +49,7 @@ http://kfyatek-dev.jogger.pl/2010/05/12/common-lisp-for-gtksourceview/
   <default-regex-options case-sensitive="false"/>
 
   <definitions>
-    <context id="clisp">
+    <context id="common-lisp">
       <include>
         <context id="line-comment" style-ref="comment" end-at-line-end="true">
           <start>;</start>
