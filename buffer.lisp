@@ -14,6 +14,10 @@
    (external-format :utf-8))
   (:metaclass gobject-class))
 
+(defmethod update-cursor ((buffer buffer) iter)
+  (text-buffer-place-cursor buffer iter)
+  (text-view-scroll-mark-onscreen (view-of buffer) (text-buffer-insertion-mark buffer)))
+
 (defmethod digit-argument-of ((buffer buffer))
   (with-slots (digit-argument) buffer
     (prog1 digit-argument
@@ -43,9 +47,6 @@
 (defun iter-at-mark (buffer)
   (text-buffer-get-iter-at-mark buffer
                                 (text-buffer-insertion-mark buffer)))
-
-(defun place-cursor (buffer iter)
-  (text-buffer-place-cursor buffer iter))
 
 (defun start-iter (buffer)
   (text-buffer-get-start-iter buffer))
@@ -155,51 +156,51 @@
 (defun info.read-eval-print.editor.command::backward-char (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))
     (text-iter-move iter :count count :direction :backward)
-    (place-cursor *buffer* iter)))
+    (update-cursor *buffer* iter)))
 
 (defun info.read-eval-print.editor.command::forward-char (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))
     (text-iter-move iter :count count :direction :forward)
-    (place-cursor *buffer* iter)))
+    (update-cursor *buffer* iter)))
 
 (defun info.read-eval-print.editor.command::next-line (&optional (count *digit-argument*))
   (let* ((iter (iter-at-mark *buffer*))
          (line-offset (text-iter-line-offset iter)))
-    (loop repeat count do (text-view-forward-display-line (view-of *buffer*) iter))
+    ;; (loop repeat count do (text-view-forward-display-line (view-of *buffer*) iter))
+    (text-iter-move iter :count count :by :line)
     (setf (text-iter-line-offset iter) line-offset)
     (when (/= line-offset (text-iter-line-offset iter))
       (text-view-forward-display-line-end *view* iter))
-    (place-cursor *buffer* iter)))
+    (update-cursor *buffer* iter)))
 
 
 (defun info.read-eval-print.editor.command::previous-line (&optional (count *digit-argument*))
   (let* ((iter (iter-at-mark *buffer*))
          (line-offset (text-iter-line-offset iter)))
-    (loop repeat count do (text-view-backward-display-line (view-of *buffer*) iter))
+    ;; (loop repeat count do (text-view-backward-display-line (view-of *buffer*) iter))
+    (text-iter-move iter :count count :by :line :direction :backward)
     (setf (text-iter-line-offset iter) line-offset)
-    (place-cursor *buffer* iter)))
+    (update-cursor *buffer* iter)))
 
 
 (defun info.read-eval-print.editor.command::beginning-of-buffer ()
   (let ((iter (start-iter *buffer*)))
-    (place-cursor *buffer* iter)
-    (text-view-scroll-to-iter (view-of *buffer*) iter)))
+    (update-cursor *buffer* iter)))
 
 (defun info.read-eval-print.editor.command::end-of-buffer ()
   (let ((iter (end-iter *buffer*)))
-    (place-cursor *buffer* iter)
-    (text-view-scroll-to-iter (view-of *buffer*) iter)))
+    (update-cursor *buffer* iter)))
 
 (defun info.read-eval-print.editor.command::forward-sexp (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))
     (forward-sexp iter count )
-    (place-cursor *buffer* iter)))
+    (update-cursor *buffer* iter)))
 
 
 (defun info.read-eval-print.editor.command::backward-sexp (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))
     (backward-sexp iter count)
-    (place-cursor *buffer* iter)))
+    (update-cursor *buffer* iter)))
 
 
 (defun info.read-eval-print.editor.command::delete-char (&optional (count *digit-argument*))
