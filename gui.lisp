@@ -49,7 +49,7 @@
                       (:insert . ,*insert-dispatch-table*)
                       (:command . ,*command-dispatch-table*)))
    (command-key-bindings)
-   (mode :normal)))
+   (mode :normal :type (member :normal :insert :command))))
 
 (defmethod (setf dispatch-table) (dispatch-table editor mode)
   (setf (cdr (assoc mode (dispatch-tables-of editor)))
