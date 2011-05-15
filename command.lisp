@@ -9,20 +9,22 @@
 (defun info.read-eval-print.editor.command::normal-mode ()
   (setf (mode-of *editor*) :normal)
   (setf (text-buffer-text (text-view-buffer (command-view-of *editor*))) "")
-  (widget-grab-focus (buffer-view-of *editor*)))
+  (widget-grab-focus (current-view-of *editor*)))
 
 (defun info.read-eval-print.editor.command::insert-mode ()
   (setf (mode-of *editor*) :insert)
-  (widget-grab-focus (buffer-view-of *editor*)))
+  (widget-grab-focus (current-view-of *editor*)))
 
 (defun info.read-eval-print.editor.command::a-insert-mode ()
   (info.read-eval-print.editor.command::forward-char)
   (info.read-eval-print.editor.command::insert-mode))
 
 (defun info.read-eval-print.editor.command::e (path)
-  (let ((*buffer* (current-buffer-of *editor*)))
+  (let* ((*view* (current-view-of *editor*))
+         (*buffer* (buffer-of *view*)))
     (find-file *buffer* path)
-    (widget-grab-focus (view-of *buffer*))))
+    (widget-grab-focus *view*)
+    (update-status *view*)))
 
 
 (defun info.read-eval-print.editor.command::q ()

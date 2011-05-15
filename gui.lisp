@@ -4,6 +4,29 @@
 (defvar *view*)
 
 
+(defclass* view (source-view)
+  ((box)
+   (status-view))
+  (:metaclass gobject-class))
+
+(defmethod buffer-of ((view view))
+  (text-view-buffer view))
+
+(defmethod (setf buffer-of) (buffer (view view))
+  (setf (view-of buffer) view
+        (text-view-buffer view) buffer))
+
+(defmethod status-text ((view view))
+  (text-buffer-text (text-view-buffer (status-view-of view))))
+
+(defmethod (setf status-text) (value (view view))
+  (setf (text-buffer-text (text-view-buffer (status-view-of view)))
+        value))
+
+(defmethod update-status ((view view))
+  (setf (status-text view) (name-of (buffer-of view))))
+
+
 
 (defgeneric dispatch-event (dispatch-table sender event))
 (defgeneric restore-dispatch-table (temporary-dispatch-table))
@@ -40,7 +63,10 @@
 
 (defclass* editor ()
   ((window)
-   (buffer-view)
+   (view-box)
+   (views nil)
+   (current-view nil)
+   (buffers nil)
    (buffer-key-bindings)
    (current-buffer)
    (command-buffer)
@@ -119,49 +145,74 @@
   (declare (ignore command-text-view event-key))
   nil)
 
+(defparameter *default-buffer-style-scheme* "oblivion")
+(defparameter *default-status-style-scheme* "classic")
 
+(defun make-view ()
+  (let-ui (v-box
+           :var view-box
+           (scrolled-window
+            :hscrollbar-policy :automatic
+            :vscrollbar-policy :automatic
+            :shadow-type :etched-in
+            (view :var view :show-line-numbers t :wrap-mode :char))
+           :expand t
+           :fill t
+           (source-view :var status-view
+                        :buffer (make-instance 'buffer)
+                        :wrap-mode :char)
+           :expand nil)
+    (make-instance 'source-view )
+    (let ((source-buffer (make-instance 'buffer))
+          (status-buffer (source-view-buffer status-view)))
+      (setf (buffer-of view) source-buffer
+            (box-of view) view-box
+            (status-view-of view) status-view
+            (view-of status-buffer) status-view
+            (style-scheme source-buffer) *default-buffer-style-scheme*
+            (style-scheme status-buffer) *default-status-style-scheme*)
+      view)))
+
+(defmethod window-split ((editor editor) view)
+  )
 
 
 (defun main ()
   (with-main-loop
-    (let-ui (gtk-window :type :toplevel
-                        :position :center
-                        :title "Editor"
-                        :default-width 300
-                        :default-height 400
-                        :var window
-                        (v-box
-                         (scrolled-window
-                          :hscrollbar-policy :automatic
-                          :vscrollbar-policy :automatic
-                          :shadow-type :etched-in
-                          (source-view :var buffer-view
-                                       :buffer (change-class (make-instance 'source-buffer)
-                                                             'buffer)))
-                         :expand t
-                         (source-view :var command-view
-                                      :buffer (change-class (make-instance 'source-buffer)
-                                                            'buffer
-                                                            :name "command buffer"))
-                         :expand nil))
-      (let ((sb (source-view-buffer buffer-view))
-            (cb (source-view-buffer command-view)))
-        (setf (view-of sb) buffer-view
-              (show-line-numbers buffer-view) t
-              (style-scheme sb) "oblivion"
-              (view-of cb) command-view
-              (style-scheme cb) "oblivion"))
-      (setf *editor* (make-instance 'editor
-                                    :window window
-                                    :buffer-view buffer-view
-                                    :current-buffer (source-view-buffer buffer-view)
-                                    :command-view command-view
-                                    :command-buffer (source-view-buffer command-view)))
+    (let ((buffer-view (make-view)))
+      (let-ui (gtk-window
+               :type :toplevel
+               :position :center
+               :title "Editor"
+               :default-width 300
+               :default-height 400
+               :var window
+               (v-box
+                :var view-box
+                (:expr (box-of buffer-view))
+                :expand t
+                :fill t
+                (source-view :var command-view
+                             :buffer (make-instance 'buffer :name "command buffer")
+                             :wrap-mode :char)
+                :expand nil))
+        (let ((cb (source-view-buffer command-view)))
+          (setf (view-of cb) command-view
+                (style-scheme cb) *default-buffer-style-scheme*)
+          (setf *editor* (make-instance 'editor
+                                        :window window
+                                        :view-box view-box
+                                        :views (list buffer-view)
+                                        :current-view buffer-view
+                                        :buffers (list (buffer-of buffer-view))
+                                        :current-buffer (source-view-buffer buffer-view)
+                                        :command-view command-view
+                                        :command-buffer (source-view-buffer command-view))))
 
-      (connect-signal window "destroy" (lambda (w) (declare (ignore w)) (leave-gtk-main)))
-      (connect-signal buffer-view "key-press-event" 'buffer-text-view-key-press-event-cb)
-      (connect-signal buffer-view "key-release-event" 'buffer-text-view-key-release-event-cb)
-      (connect-signal command-view "key-press-event" 'command-text-view-key-press-event-cb)
-      (connect-signal command-view "key-release-event" 'command-text-view-key-release-event-cb)
+        (connect-signal window "destroy" (lambda (w) (declare (ignore w)) (leave-gtk-main)))
+        (connect-signal buffer-view "key-press-event" 'buffer-text-view-key-press-event-cb)
+        (connect-signal buffer-view "key-release-event" 'buffer-text-view-key-release-event-cb)
+        (connect-signal command-view "key-press-event" 'command-text-view-key-press-event-cb)
+        (connect-signal command-view "key-release-event" 'command-text-view-key-release-event-cb)
 
-      (widget-show window))))
+        (widget-show window)))))
