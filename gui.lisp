@@ -145,6 +145,7 @@
                                                             :name "command buffer"))
                          :expand nil))
       (setf (view-of (source-view-buffer buffer-view)) buffer-view
+            (show-line-numbers buffer-view) t
             (view-of (source-view-buffer command-view)) command-view)
       (setf *editor* (make-instance 'editor
                                     :window window

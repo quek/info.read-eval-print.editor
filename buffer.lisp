@@ -169,12 +169,14 @@
       (text-view-forward-display-line-end *view* iter))
     (place-cursor *buffer* iter)))
 
+
 (defun info.read-eval-print.editor.command::previous-line (&optional (count *digit-argument*))
   (let* ((iter (iter-at-mark *buffer*))
          (line-offset (text-iter-line-offset iter)))
     (loop repeat count do (text-view-backward-display-line (view-of *buffer*) iter))
     (setf (text-iter-line-offset iter) line-offset)
     (place-cursor *buffer* iter)))
+
 
 (defun info.read-eval-print.editor.command::beginning-of-buffer ()
   (let ((iter (start-iter *buffer*)))

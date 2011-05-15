@@ -106,6 +106,12 @@
   (buffer (g-object source-buffer)))
 (export 'source-buffer-redo)
 
+(defcfun (show-line-numbers "gtk_source_view_get_show_line_numbers") :boolean
+   (view (g-object source-view)))
+(defun (setf show-line-numbers) (value view)
+  (foreign-funcall "gtk_source_view_set_show_line_numbers"
+                   (g-object source-view) view :boolean value :void))
+(export 'show-line-numbers)
 
 (defcfun gtk-source-language-manager-get-default :pointer)
 (export 'gtk-source-language-manager-get-default)
