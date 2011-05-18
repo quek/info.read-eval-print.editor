@@ -2,6 +2,8 @@
 
 (defvar *buffer*)
 
+(defparameter *default-buffer-style-scheme* "oblivion")
+
 (define-symbol-macro *digit-argument*
     (or (digit-argument-of *buffer*) 1))
 
@@ -14,9 +16,14 @@
    (external-format :utf-8))
   (:metaclass gobject-class))
 
+(defmethod initialize-instance :after ((buffer buffer) &rest initargs)
+  (declare (ignore initargs))
+  (setf (style-scheme buffer) *default-buffer-style-scheme*))
+
 (defmethod update-cursor ((buffer buffer) iter)
   (text-buffer-place-cursor buffer iter)
-  (text-view-scroll-mark-onscreen (view-of buffer) (text-buffer-insertion-mark buffer)))
+  (text-view-scroll-mark-onscreen (buffer-view-of (view-of buffer))
+                                  (text-buffer-insertion-mark buffer)))
 
 (defmethod digit-argument-of ((buffer buffer))
   (with-slots (digit-argument) buffer

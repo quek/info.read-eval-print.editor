@@ -3,28 +3,67 @@
 (defvar *editor*)
 (defvar *view*)
 
-
-(defclass* view (source-view)
-  ((box)
-   (status-view))
+(defclass* view (v-box)
+  ((buffer-view :reader t)
+   (status-view :reader t))
   (:metaclass gobject-class))
 
+(defmethod initialize-instance :after ((view view) &rest args)
+  (declare (ignore args))
+  (connect-signal (buffer-view-of view) "key-press-event" 'buffer-text-view-key-press-event-cb)
+  (connect-signal (buffer-view-of view) "key-release-event" 'buffer-text-view-key-release-event-cb)
+  (connect-signal (buffer-view-of view) "grab-focus" 'view-grab-focus-cb))
+
+(defmethod buffer-view-of ((text-view text-view))
+  text-view)
+
 (defmethod buffer-of ((view view))
-  (text-view-buffer view))
+  (text-view-buffer (buffer-view-of view)))
 
 (defmethod (setf buffer-of) (buffer (view view))
-  (setf (view-of buffer) view
-        (text-view-buffer view) buffer))
+  (setf (view-of buffer) (buffer-view-of view)
+        (text-view-buffer (buffer-view-of view)) buffer))
 
 (defmethod status-text ((view view))
   (text-buffer-text (text-view-buffer (status-view-of view))))
 
 (defmethod (setf status-text) (value (view view))
   (setf (text-buffer-text (text-view-buffer (status-view-of view)))
-        value))
+        (or value "")))
 
 (defmethod update-status ((view view))
   (setf (status-text view) (name-of (buffer-of view))))
+
+(defmethod focus ((view view))
+  (widget-grab-focus (buffer-view-of view)))
+
+(defun make-view (&key (buffer (make-instance 'buffer)))
+  (let ((buffer-view (make-instance 'source-view
+                                    :show-line-numbers t
+                                    :wrap-mode :char))
+        (status-view (make-instance 'source-view
+                                    :buffer (make-instance 'buffer)
+                                    :wrap-mode :char)))
+    (let-ui (view
+             :buffer-view buffer-view
+             :status-view status-view
+             :var view
+             (scrolled-window
+              :hscrollbar-policy :automatic
+              :vscrollbar-policy :automatic
+              :shadow-type :etched-in
+              (:expr buffer-view))
+             :expand t
+             :fill t
+             (:expr status-view)
+             :expand nil)
+      (let ((status-buffer (source-view-buffer status-view)))
+        (setf (buffer-of view) buffer
+              (view-of status-buffer) status-view
+              (style-scheme buffer) *default-buffer-style-scheme*
+              (style-scheme status-buffer) *default-status-style-scheme*)
+        (update-status view)
+        view))))
 
 
 
@@ -63,8 +102,7 @@
 
 (defclass* editor ()
   ((window)
-   (view-box)
-   (views nil)
+   (views)
    (current-view nil)
    (buffers nil)
    (buffer-key-bindings)
@@ -133,6 +171,11 @@
   (declare (ignore buffer-text-view event-key))
   nil)
 
+(defun view-grab-focus-cb (view)
+  (let ((view (widget-parent (widget-parent view))))
+    (setf (current-view-of *editor*) view
+          (current-buffer-of *editor*) (buffer-of view))))
+
 ;; event は nil を返すとデフォルトのイベントが実行される。
 (defun command-text-view-key-press-event-cb (command-text-view event-key)
   (let ((dispatch-table (dispatch-table *editor*))
@@ -145,36 +188,42 @@
   (declare (ignore command-text-view event-key))
   nil)
 
-(defparameter *default-buffer-style-scheme* "oblivion")
 (defparameter *default-status-style-scheme* "classic")
 
-(defun make-view ()
-  (let-ui (v-box
-           :var view-box
-           (scrolled-window
-            :hscrollbar-policy :automatic
-            :vscrollbar-policy :automatic
-            :shadow-type :etched-in
-            (view :var view :show-line-numbers t :wrap-mode :char))
-           :expand t
-           :fill t
-           (source-view :var status-view
-                        :buffer (make-instance 'buffer)
-                        :wrap-mode :char)
-           :expand nil)
-    (make-instance 'source-view )
-    (let ((source-buffer (make-instance 'buffer))
-          (status-buffer (source-view-buffer status-view)))
-      (setf (buffer-of view) source-buffer
-            (box-of view) view-box
-            (status-view-of view) status-view
-            (view-of status-buffer) status-view
-            (style-scheme source-buffer) *default-buffer-style-scheme*
-            (style-scheme status-buffer) *default-status-style-scheme*)
-      view)))
 
-(defmethod window-split ((editor editor) view)
-  )
+(defmethod window-split ((editor editor) view &optional (buffer (buffer-of view)))
+  (let ((views (views-of editor))
+        (new-view (make-view :buffer buffer)))
+    (%window-split views view new-view 'v-box)))
+
+(defmethod window-vsplit ((editor editor) view &optional (buffer (buffer-of view)))
+  (let ((views (views-of editor))
+        (new-view (make-view :buffer buffer)))
+    (%window-split views view new-view 'h-box)))
+
+(defgeneric %window-split (wiews view new-view box-class)
+  (:method ((views container) view new-view box-class)
+    (labels ((f (fun)
+               (container-remove views view)
+               (let ((new-box (make-instance box-class)))
+                 (box-pack-start new-box view)
+                 (box-pack-start new-box new-view)
+                 (funcall fun views new-box)
+                 (widget-show new-box))
+               t))
+      (let ((children (container-children views)))
+        ;; view は car か cdr にいるはず。
+        (cond ((eq view (car children))
+               (print 'car)
+               (f #'box-pack-end))
+              ((eq view (cadr children))
+               (print 'cadr)
+               (f #'box-pack-start))
+              (t
+               (loop for x in children
+                     thereis (%window-split x view new-view box-class)))))))
+  (:method (views view new-view box-class)
+    nil))
 
 
 (defun main ()
@@ -188,8 +237,9 @@
                :default-height 400
                :var window
                (v-box
-                :var view-box
-                (:expr (box-of buffer-view))
+                (v-box
+                 :var views
+                 (:expr buffer-view))
                 :expand t
                 :fill t
                 (source-view :var command-view
@@ -197,22 +247,21 @@
                              :wrap-mode :char)
                 :expand nil))
         (let ((cb (source-view-buffer command-view)))
-          (setf (view-of cb) command-view
-                (style-scheme cb) *default-buffer-style-scheme*)
+          (setf (view-of cb) command-view)
           (setf *editor* (make-instance 'editor
                                         :window window
-                                        :view-box view-box
-                                        :views (list buffer-view)
+                                        :views views
                                         :current-view buffer-view
                                         :buffers (list (buffer-of buffer-view))
-                                        :current-buffer (source-view-buffer buffer-view)
+                                        :current-buffer (buffer-of buffer-view)
                                         :command-view command-view
                                         :command-buffer (source-view-buffer command-view))))
 
         (connect-signal window "destroy" (lambda (w) (declare (ignore w)) (leave-gtk-main)))
-        (connect-signal buffer-view "key-press-event" 'buffer-text-view-key-press-event-cb)
-        (connect-signal buffer-view "key-release-event" 'buffer-text-view-key-release-event-cb)
         (connect-signal command-view "key-press-event" 'command-text-view-key-press-event-cb)
         (connect-signal command-view "key-release-event" 'command-text-view-key-release-event-cb)
 
         (widget-show window)))))
+
+#+nil
+(gtk-source-completion-get-providers (source-view-completion (make-instance 'source-view)))

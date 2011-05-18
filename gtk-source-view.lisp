@@ -39,6 +39,10 @@
   (:trailing 64)
   (:all 127))
 
+(define-g-interface "GtkSourceCompletionProvider"
+    source-completion-provider
+    (:export t :type-initializer "gtk_source_completion_provider_get_type"))
+
 (define-g-object-class "GtkSourceView" source-view
   (:superclass text-view :export t :interfaces ("AtkImplementorIface" "GtkBuildable") :type-initializer "gtk_source_view_get_type")
   ((buffer source-view-buffer "buffer" "GtkSourceBuffer" t t)
@@ -75,6 +79,18 @@
      "GtkTextIter"
      t
      t)))
+
+(define-g-object-class "GtkSourceCompletion" source-completion
+  (:superclass g-object :export t :interfaces nil :type-initializer "gtk_source_completion_get_type")
+  ((accelerators source-completion-accelerators "accelerators" "guint" t t)
+   (auto-complete-delay source-completion-auto-complete-delay "auto-complete-delay" "guint" t t)
+   (proposal-page-size source-completion-proposal-page-size "proposal-page-size" "guint" t t)
+   (provider-page-size source-completion-provider-page-size "provider-page-size" "guint" t t)
+   (remember-info-visibility source-completion-remember-info-visibility "remember-info-visibility" "gboolean" t t)
+   (select-on-show source-completion-select-on-show "select-on-show" "gboolean" t t)
+   (show-headers source-completion-show-headers "show-headers" "gboolean" t t)
+   (show-icons source-completion-show-icons "show-icons" "gboolean" t t)
+   (view source-completion-view "view" "GtkSourceView*" t nil)))
 
 (define-g-object-class "GtkSourceGutter" source-gutter (:superclass g-object :export t :interfaces nil :type-initializer "gtk_source_gutter_get_type")
   ((view source-gutter-view "view" "GtkSourceView" t nil) (window-type source-gutter-window-type "window-type" "GtkTextWindowType" t nil)))
@@ -140,8 +156,7 @@
   (scheme-id :string))
 (export 'gtk-source-style-scheme-manager-get-scheme)
 
-#+ba
-(guess-language (gtk-source-language-manager-get-default)
-                "a.c"
-                (cffi-sys:null-pointer  ); "application/x-c"
-                )
+
+(defcfun gtk-source-completion-get-providers (glist (g-object source-completion-provider) :free-from-foreign nil)
+  (completion (g-object source-completion)))
+(export 'gtk-source-completion-get-providers)

@@ -21,10 +21,11 @@
 
 (defun info.read-eval-print.editor.command::e (path)
   (let* ((*view* (current-view-of *editor*))
-         (*buffer* (buffer-of *view*)))
+         (*buffer* (make-instance 'buffer :view *view*)))
     (find-file *buffer* path)
-    (widget-grab-focus *view*)
-    (update-status *view*)))
+    (setf (buffer-of *view*) *buffer*)
+    (update-status *view*)
+    (focus *view*)))
 
 
 (defun info.read-eval-print.editor.command::q ()
@@ -46,6 +47,16 @@
   (loop for i from 0 to 9
         do (eval `(defun ,(sym 'info.read-eval-print.editor.command::digit-argument- i) ()
                     (info.read-eval-print.editor.command::digit-argument-n ,i)))))
+
+
+(defun info.read-eval-print.editor.command::split ()
+  (window-split *editor* (current-view-of *editor*))
+  (focus (current-view-of *editor*)))
+
+(defun info.read-eval-print.editor.command::vsplit ()
+  (window-vsplit *editor* (current-view-of *editor*))
+  (focus (current-view-of *editor*)))
+
 
 ;; normal
 (loop for (keyseq command)
