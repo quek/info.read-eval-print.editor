@@ -203,22 +203,23 @@
 
 (defgeneric %window-split (wiews view new-view box-class)
   (:method ((views container) view new-view box-class)
-    (labels ((f (fun)
+    (labels ((f (fun other)
                (container-remove views view)
+               (when other (container-remove views other))
                (let ((new-box (make-instance box-class)))
                  (box-pack-start new-box view)
                  (box-pack-start new-box new-view)
                  (funcall fun views new-box)
+                 (when other (funcall fun views other))
                  (widget-show new-box))
                t))
       (let ((children (container-children views)))
         ;; view は car か cdr にいるはず。
         (cond ((eq view (car children))
                (print 'car)
-               (f #'box-pack-end))
+               (f #'box-pack-start (cadr children)))
               ((eq view (cadr children))
-               (print 'cadr)
-               (f #'box-pack-start))
+               (f #'box-pack-end (car children)))
               (t
                (loop for x in children
                      thereis (%window-split x view new-view box-class)))))))
