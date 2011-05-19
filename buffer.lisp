@@ -8,7 +8,7 @@
     (or (digit-argument-of *buffer*) 1))
 
 (defclass* buffer (source-buffer)
-  ((view)
+  ((frame)
    (name nil)
    (file nil)
    (yank "AAAA")
@@ -22,7 +22,7 @@
 
 (defmethod update-cursor ((buffer buffer) iter)
   (text-buffer-place-cursor buffer iter)
-  (text-view-scroll-mark-onscreen (buffer-view-of (view-of buffer))
+  (text-view-scroll-mark-onscreen (view-of (frame-of buffer))
                                   (text-buffer-insertion-mark buffer)))
 
 (defmethod digit-argument-of ((buffer buffer))
@@ -173,18 +173,18 @@
 (defun info.read-eval-print.editor.command::next-line (&optional (count *digit-argument*))
   (let* ((iter (iter-at-mark *buffer*))
          (line-offset (text-iter-line-offset iter)))
-    ;; (loop repeat count do (text-view-forward-display-line (view-of *buffer*) iter))
+    ;; (loop repeat count do (text-view-forward-display-line (frame-of *buffer*) iter))
     (text-iter-move iter :count count :by :line)
     (setf (text-iter-line-offset iter) line-offset)
     (when (/= line-offset (text-iter-line-offset iter))
-      (text-view-forward-display-line-end *view* iter))
+      (text-view-forward-display-line-end *frame* iter))
     (update-cursor *buffer* iter)))
 
 
 (defun info.read-eval-print.editor.command::previous-line (&optional (count *digit-argument*))
   (let* ((iter (iter-at-mark *buffer*))
          (line-offset (text-iter-line-offset iter)))
-    ;; (loop repeat count do (text-view-backward-display-line (view-of *buffer*) iter))
+    ;; (loop repeat count do (text-view-backward-display-line (frame-of *buffer*) iter))
     (text-iter-move iter :count count :by :line :direction :backward)
     (setf (text-iter-line-offset iter) line-offset)
     (update-cursor *buffer* iter)))
@@ -196,6 +196,11 @@
 
 (defun info.read-eval-print.editor.command::end-of-buffer ()
   (let ((iter (end-iter *buffer*)))
+    (update-cursor *buffer* iter)))
+
+(defun info.read-eval-print.editor.command::end-of-line ()
+  (let ((iter (iter-at-mark *buffer*)))
+    (text-iter-forward-to-line-end iter)
     (update-cursor *buffer* iter)))
 
 (defun info.read-eval-print.editor.command::forward-sexp (&optional (count *digit-argument*))

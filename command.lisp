@@ -9,23 +9,28 @@
 (defun info.read-eval-print.editor.command::normal-mode ()
   (setf (mode-of *editor*) :normal)
   (setf (text-buffer-text (text-view-buffer (command-view-of *editor*))) "")
-  (widget-grab-focus (current-view-of *editor*)))
+  (widget-grab-focus (current-frame-of *editor*)))
 
-(defun info.read-eval-print.editor.command::insert-mode ()
+(defun info.read-eval-print.editor.command::i ()
   (setf (mode-of *editor*) :insert)
-  (widget-grab-focus (current-view-of *editor*)))
+  (widget-grab-focus (current-frame-of *editor*)))
 
-(defun info.read-eval-print.editor.command::a-insert-mode ()
+(defun info.read-eval-print.editor.command::a ()
   (info.read-eval-print.editor.command::forward-char)
-  (info.read-eval-print.editor.command::insert-mode))
+  (info.read-eval-print.editor.command::i))
+
+(defun info.read-eval-print.editor.command::o ()
+  (info.read-eval-print.editor.command::end-of-line)
+  (insert *buffer* (string #\Newline))
+  (info.read-eval-print.editor.command::i))
 
 (defun info.read-eval-print.editor.command::e (path)
-  (let* ((*view* (current-view-of *editor*))
-         (*buffer* (make-instance 'buffer :view *view*)))
+  (let* ((*frame* (current-frame-of *editor*))
+         (*buffer* (make-instance 'buffer :frame *frame*)))
     (find-file *buffer* path)
-    (setf (buffer-of *view*) *buffer*)
-    (update-status *view*)
-    (focus *view*)))
+    (setf (buffer-of *frame*) *buffer*)
+    (update-status *frame*)
+    (focus *frame*)))
 
 
 (defun info.read-eval-print.editor.command::q ()
@@ -50,20 +55,25 @@
 
 
 (defun info.read-eval-print.editor.command::split ()
-  (window-split *editor* (current-view-of *editor*))
-  (focus (current-view-of *editor*)))
+  (window-split *editor* (current-frame-of *editor*))
+  (focus (current-frame-of *editor*)))
 
 (defun info.read-eval-print.editor.command::vsplit ()
-  (window-vsplit *editor* (current-view-of *editor*))
-  (focus (current-view-of *editor*)))
+  (window-vsplit *editor* (current-frame-of *editor*))
+  (focus (current-frame-of *editor*)))
+
+(defun info.read-eval-print.editor.command::close ()
+  (window-close *editor* (current-frame-of *editor*))
+  (focus (current-frame-of *editor*)))
+
 
 
 ;; normal
 (loop for (keyseq command)
         in `(((#\:) info.read-eval-print.editor.command::command-mode)
-             ((#\i) info.read-eval-print.editor.command::insert-mode)
-             ((#\a) info.read-eval-print.editor.command::a-insert-mode)
-             ((#\o) info.read-eval-print.editor.command::o-insert-mode)
+             ((#\i) info.read-eval-print.editor.command::i)
+             ((#\a) info.read-eval-print.editor.command::a)
+             ((#\o) info.read-eval-print.editor.command::o)
              ((#\h) info.read-eval-print.editor.command::backward-char)
              ((#\j) info.read-eval-print.editor.command::next-line)
              ((#\k) info.read-eval-print.editor.command::previous-line)
@@ -71,6 +81,7 @@
              ((#\w) info.read-eval-print.editor.command::forward-sexp)
              ((#\b) info.read-eval-print.editor.command::backward-sexp)
              ((#\G) info.read-eval-print.editor.command::end-of-buffer)
+             ((#\$) info.read-eval-print.editor.command::end-of-line)
              ((#\x) info.read-eval-print.editor.command::delete-char)
              ((#\X) info.read-eval-print.editor.command::backward-delete-char)
              ((#\u) info.read-eval-print.editor.command::undo)

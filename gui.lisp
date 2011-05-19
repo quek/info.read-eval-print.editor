@@ -1,69 +1,73 @@
 (in-package :info.read-eval-print.editor)
 
 (defvar *editor*)
-(defvar *view*)
+(defvar *frame*)
 
-(defclass* view (v-box)
-  ((buffer-view :reader t)
+(defgeneric view-of (frame))
+
+(defgeneric buffer-of (frame))
+
+(defclass* frame (v-box)
+  ((view :reader t)
    (status-view :reader t))
   (:metaclass gobject-class))
 
-(defmethod initialize-instance :after ((view view) &rest args)
+(defmethod initialize-instance :after ((frame frame) &rest args)
   (declare (ignore args))
-  (connect-signal (buffer-view-of view) "key-press-event" 'buffer-text-view-key-press-event-cb)
-  (connect-signal (buffer-view-of view) "key-release-event" 'buffer-text-view-key-release-event-cb)
-  (connect-signal (buffer-view-of view) "grab-focus" 'view-grab-focus-cb))
+  (connect-signal (view-of frame) "key-press-event" 'buffer-text-view-key-press-event-cb)
+  (connect-signal (view-of frame) "key-release-event" 'buffer-text-view-key-release-event-cb)
+  (connect-signal (view-of frame) "grab-focus" 'view-grab-focus-cb))
 
-(defmethod buffer-view-of ((text-view text-view))
+(defmethod view-of ((text-view text-view))
   text-view)
 
-(defmethod buffer-of ((view view))
-  (text-view-buffer (buffer-view-of view)))
+(defmethod buffer-of ((frame frame))
+  (text-view-buffer (view-of frame)))
 
-(defmethod (setf buffer-of) (buffer (view view))
-  (setf (view-of buffer) (buffer-view-of view)
-        (text-view-buffer (buffer-view-of view)) buffer))
+(defmethod (setf buffer-of) (buffer (frame frame))
+  (setf (frame-of buffer) (view-of frame)
+        (text-view-buffer (view-of frame)) buffer))
 
-(defmethod status-text ((view view))
-  (text-buffer-text (text-view-buffer (status-view-of view))))
+(defmethod status-text ((frame frame))
+  (text-buffer-text (text-view-buffer (status-view-of frame))))
 
-(defmethod (setf status-text) (value (view view))
-  (setf (text-buffer-text (text-view-buffer (status-view-of view)))
+(defmethod (setf status-text) (value (frame frame))
+  (setf (text-buffer-text (text-view-buffer (status-view-of frame)))
         (or value "")))
 
-(defmethod update-status ((view view))
-  (setf (status-text view) (name-of (buffer-of view))))
+(defmethod update-status ((frame frame))
+  (setf (status-text frame) (name-of (buffer-of frame))))
 
-(defmethod focus ((view view))
-  (widget-grab-focus (buffer-view-of view)))
+(defmethod focus ((frame frame))
+  (widget-grab-focus (view-of frame)))
 
-(defun make-view (&key (buffer (make-instance 'buffer)))
-  (let ((buffer-view (make-instance 'source-view
-                                    :show-line-numbers t
-                                    :wrap-mode :char))
+(defun make-frame (&key (buffer (make-instance 'buffer)))
+  (let ((view (make-instance 'source-view
+                             :show-line-numbers t
+                             :wrap-mode :char
+                             :buffer buffer))
         (status-view (make-instance 'source-view
                                     :buffer (make-instance 'buffer)
                                     :wrap-mode :char)))
-    (let-ui (view
-             :buffer-view buffer-view
+    (let-ui (frame
+             :var f
+             :view view
              :status-view status-view
-             :var view
              (scrolled-window
               :hscrollbar-policy :automatic
               :vscrollbar-policy :automatic
               :shadow-type :etched-in
-              (:expr buffer-view))
+              (:expr view))
              :expand t
              :fill t
              (:expr status-view)
              :expand nil)
       (let ((status-buffer (source-view-buffer status-view)))
-        (setf (buffer-of view) buffer
-              (view-of status-buffer) status-view
+        (setf (frame-of status-buffer) status-view
               (style-scheme buffer) *default-buffer-style-scheme*
               (style-scheme status-buffer) *default-status-style-scheme*)
-        (update-status view)
-        view))))
+        (update-status f)
+        f))))
 
 
 
@@ -102,8 +106,8 @@
 
 (defclass* editor ()
   ((window)
-   (views)
-   (current-view nil)
+   (current-frame nil)
+   (top-frame nil)
    (buffers nil)
    (buffer-key-bindings)
    (current-buffer)
@@ -162,7 +166,7 @@
 
 (defun buffer-text-view-key-press-event-cb (buffer-text-view event-key)
   (let ((dispatch-table (dispatch-table *editor*))
-        (*view* buffer-text-view)
+        (*frame* buffer-text-view)
         (*buffer* (current-buffer-of *editor*)))
     (dispatch-event dispatch-table buffer-text-view event-key)))
 
@@ -172,14 +176,14 @@
   nil)
 
 (defun view-grab-focus-cb (view)
-  (let ((view (widget-parent (widget-parent view))))
-    (setf (current-view-of *editor*) view
-          (current-buffer-of *editor*) (buffer-of view))))
+  (let ((frame (widget-parent (widget-parent view))))
+    (setf (current-frame-of *editor*) frame
+          (current-buffer-of *editor*) (buffer-of frame))))
 
 ;; event は nil を返すとデフォルトのイベントが実行される。
 (defun command-text-view-key-press-event-cb (command-text-view event-key)
   (let ((dispatch-table (dispatch-table *editor*))
-        (*view* command-text-view)
+        (*frame* command-text-view)
         (*buffer* (command-buffer-of *editor*)))
     (dispatch-event dispatch-table command-text-view event-key)))
 
@@ -190,46 +194,73 @@
 
 (defparameter *default-status-style-scheme* "classic")
 
+(defmethod window-close ((editor editor) (frame frame))
+  (when (closable-p editor)
+    (let ((parent (widget-parent frame)))
+      (container-remove parent frame)
+      (setf (current-frame-of editor) (first-frame editor))
+      (when (null (container-children parent))
+        (container-remove (widget-parent parent) parent)))))
 
-(defmethod window-split ((editor editor) view &optional (buffer (buffer-of view)))
-  (let ((views (views-of editor))
-        (new-view (make-view :buffer buffer)))
-    (%window-split views view new-view 'v-box)))
+(defun closable-p (editor)
+  (let ((count 0))
+    (labels ((f (x)
+               (typecase x
+                 (frame
+                    (when (< 1 (incf count))
+                      (return-from closable-p t)))
+                 (t
+                    (loop for x in (container-children x)
+                          thereis (f x))))))
+      (f (top-frame-of editor)))))
 
-(defmethod window-vsplit ((editor editor) view &optional (buffer (buffer-of view)))
-  (let ((views (views-of editor))
-        (new-view (make-view :buffer buffer)))
-    (%window-split views view new-view 'h-box)))
+(defun first-frame (editor)
+  (labels ((f (x)
+             (typecase x
+               (frame x)
+               (t
+                  (loop for x in (container-children x)
+                        thereis (f x))))))
+    (f (top-frame-of editor))))
 
-(defgeneric %window-split (wiews view new-view box-class)
-  (:method ((views container) view new-view box-class)
+(defmethod window-split ((editor editor) frame &optional (buffer (buffer-of frame)))
+  (let ((views (top-frame-of editor))
+        (new-frame (make-frame :buffer buffer)))
+    (%window-split views frame new-frame 'v-box)))
+
+(defmethod window-vsplit ((editor editor) frame &optional (buffer (buffer-of frame)))
+  (let ((views (top-frame-of editor))
+        (new-frame (make-frame :buffer buffer)))
+    (%window-split views frame new-frame 'h-box)))
+
+(defgeneric %window-split (wiews frame new-frame box-class)
+  (:method ((views container) frame new-frame box-class)
     (labels ((f (fun other)
-               (container-remove views view)
+               (container-remove views frame)
                (when other (container-remove views other))
                (let ((new-box (make-instance box-class)))
-                 (box-pack-start new-box view)
-                 (box-pack-start new-box new-view)
+                 (box-pack-start new-box frame)
+                 (box-pack-start new-box new-frame)
                  (funcall fun views new-box)
                  (when other (funcall fun views other))
                  (widget-show new-box))
                t))
       (let ((children (container-children views)))
-        ;; view は car か cdr にいるはず。
-        (cond ((eq view (car children))
-               (print 'car)
+        ;; frame は car か cdr にいるはず。
+        (cond ((eq frame (car children))
                (f #'box-pack-start (cadr children)))
-              ((eq view (cadr children))
+              ((eq frame (cadr children))
                (f #'box-pack-end (car children)))
               (t
                (loop for x in children
-                     thereis (%window-split x view new-view box-class)))))))
-  (:method (views view new-view box-class)
+                     thereis (%window-split x frame new-frame box-class)))))))
+  (:method (views frame new-frame box-class)
     nil))
 
 
 (defun main ()
   (with-main-loop
-    (let ((buffer-view (make-view)))
+    (let ((frame (make-frame)))
       (let-ui (gtk-window
                :type :toplevel
                :position :center
@@ -239,8 +270,8 @@
                :var window
                (v-box
                 (v-box
-                 :var views
-                 (:expr buffer-view))
+                 :var top-frame
+                 (:expr frame))
                 :expand t
                 :fill t
                 (source-view :var command-view
@@ -248,13 +279,13 @@
                              :wrap-mode :char)
                 :expand nil))
         (let ((cb (source-view-buffer command-view)))
-          (setf (view-of cb) command-view)
+          (setf (frame-of cb) command-view)
           (setf *editor* (make-instance 'editor
                                         :window window
-                                        :views views
-                                        :current-view buffer-view
-                                        :buffers (list (buffer-of buffer-view))
-                                        :current-buffer (buffer-of buffer-view)
+                                        :current-frame frame
+                                        :top-frame top-frame
+                                        :buffers (list (buffer-of frame))
+                                        :current-buffer (buffer-of frame)
                                         :command-view command-view
                                         :command-buffer (source-view-buffer command-view))))
 
@@ -263,6 +294,3 @@
         (connect-signal command-view "key-release-event" 'command-text-view-key-release-event-cb)
 
         (widget-show window)))))
-
-#+nil
-(gtk-source-completion-get-providers (source-view-completion (make-instance 'source-view)))
