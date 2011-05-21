@@ -99,7 +99,8 @@
              ((#\p) info.read-eval-print.editor.command::paste-below-cursor)
              ((#\e) info.read-eval-print.editor.command::eval-last-sexp)
              ((#\g) ,(lambda () (setf (dispatch-table *editor* :normal) *normal-g-dispatch-table*)))
-             ((#\y) ,(lambda () (setf (dispatch-table *editor* :normal) *normal-y-dispatch-table*))))
+             ((#\y) ,(lambda () (setf (dispatch-table *editor* :normal) *normal-y-dispatch-table*)))
+             ((:control #\w) ,(lambda () (setf (dispatch-table *editor* :normal) *normal-ctl-w-dispatch-table*))))
       do (set-command *normal-dispatch-table* keyseq command))
 
 ;; insert
@@ -127,3 +128,11 @@
 (loop for (keyseq command)
         in `(((#\y) info.read-eval-print.editor.command::yank-current-line))
       do (set-command *normal-y-dispatch-table* keyseq command))
+
+;; normal - w
+(loop for (keyseq command)
+        in `(((#\h) ,(lambda () (window-h *editor*)))
+             ((#\j) ,(lambda () (window-j *editor*)))
+             ((#\k) ,(lambda () (window-k *editor*)))
+             ((#\l) ,(lambda () (window-l *editor*))))
+      do (set-command *normal-ctl-w-dispatch-table* keyseq command))

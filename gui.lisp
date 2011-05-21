@@ -2,6 +2,7 @@
 
 (defvar *editor*)
 (defvar *frame*)
+(defparameter *default-status-style-scheme* "classic")
 
 (defgeneric view-of (frame))
 
@@ -12,8 +13,10 @@
    (status-view :reader t))
   (:metaclass gobject-class))
 
-(defmethod initialize-instance :after ((frame frame) &rest args)
+(defmethod initialize-instance :after ((frame frame) &rest args &key buffer)
   (declare (ignore args))
+  (when buffer
+    (setf (frame-of buffer) frame))
   (connect-signal (view-of frame) "key-press-event" 'buffer-text-view-key-press-event-cb)
   (connect-signal (view-of frame) "key-release-event" 'buffer-text-view-key-release-event-cb)
   (connect-signal (view-of frame) "grab-focus" 'view-grab-focus-cb))
@@ -44,8 +47,7 @@
 (defun make-frame (&key (buffer (make-instance 'buffer)))
   (let ((view (make-instance 'source-view
                              :show-line-numbers t
-                             :wrap-mode :char
-                             :buffer buffer))
+                             :wrap-mode :char))
         (status-view (make-instance 'source-view
                                     :buffer (make-instance 'buffer)
                                     :wrap-mode :char)))
@@ -63,7 +65,8 @@
              (:expr status-view)
              :expand nil)
       (let ((status-buffer (source-view-buffer status-view)))
-        (setf (frame-of status-buffer) status-view
+        (setf (buffer-of f) buffer
+              (frame-of status-buffer) status-view
               (style-scheme buffer) *default-buffer-style-scheme*
               (style-scheme status-buffer) *default-status-style-scheme*)
         (update-status f)
@@ -98,6 +101,12 @@
                  :default (constantly t)))
 
 (defvar *normal-y-dispatch-table*
+  (make-instance 'temporary-dispatch-table
+                 :mode :normal
+                 :dispatch-table-to-restore *normal-dispatch-table*
+                 :default (constantly t)))
+
+(defvar *normal-ctl-w-dispatch-table*
   (make-instance 'temporary-dispatch-table
                  :mode :normal
                  :dispatch-table-to-restore *normal-dispatch-table*
@@ -192,7 +201,14 @@
   (declare (ignore command-text-view event-key))
   nil)
 
-(defparameter *default-status-style-scheme* "classic")
+
+(defun map-frame (editor function)
+  (labels ((f (x)
+             (typecase x
+               (frame (list (funcall function x)))
+               (t (loop for x in (container-children x)
+                        nconc (f x))))))
+    (f (top-frame-of editor))))
 
 (defmethod window-close ((editor editor) (frame frame))
   (when (closable-p editor)
@@ -257,6 +273,81 @@
   (:method (views frame new-frame box-class)
     nil))
 
+
+(defun window-j (editor)
+  (%window-j (current-frame-of editor)))
+
+(defun %window-j (current)
+  (let ((parent (widget-parent current)))
+    (typecase parent
+      (v-box (let* ((children (container-children parent))
+                    (car (car children))
+                    (cadr (cadr children)))
+               (if (eq car current)
+                   (typecase cadr
+                     (frame (focus cadr))
+                     ((or v-box h-box) (focus (find-depth-first-frame (container-children cadr)))))
+                   (%window-j parent))))
+      (h-box (%window-j parent)))))
+
+
+(defun window-h (editor)
+  (%window-h (current-frame-of editor)))
+
+(defun %window-h (current)
+  (let ((parent (widget-parent current)))
+    (typecase parent
+      (h-box (let* ((children (container-children parent))
+                    (car (car children))
+                    (cadr (cadr children)))
+               (if (eq cadr current)
+                   (typecase car
+                     (frame (focus car))
+                     ((or v-box h-box) (focus (rfind-depth-first-frame (container-children car)))))
+                   (%window-h parent))))
+      (v-box (%window-h parent)))))
+
+(defun window-k (editor)
+  (%window-k (current-frame-of editor)))
+
+(defun %window-k (current)
+  (let ((parent (widget-parent current)))
+    (typecase parent
+      (v-box (let* ((children (container-children parent))
+                    (car (car children))
+                    (cadr (cadr children)))
+               (if (eq cadr current)
+                   (typecase car
+                     (frame (focus car))
+                     ((or v-box h-box) (focus (rfind-depth-first-frame (container-children car)))))
+                   (%window-k parent))))
+      (h-box (%window-k parent)))))
+
+(defun window-l (editor)
+  (%window-l (current-frame-of editor)))
+
+(defun %window-l (current)
+  (let ((parent (widget-parent current)))
+    (typecase parent
+      (h-box (let* ((children (container-children parent))
+                    (car (car children))
+                    (cadr (cadr children)))
+               (if (eq car current)
+                   (typecase cadr
+                     (frame (focus cadr))
+                     ((or v-box h-box) (focus (find-depth-first-frame (container-children cadr)))))
+                   (%window-l parent))))
+      (v-box (%window-l parent)))))
+
+(defun find-depth-first-frame (list)
+  (loop for i in list
+        thereis (and (typep i 'frame) i)
+        thereis (find-depth-first-frame (container-children i))))
+
+(defun rfind-depth-first-frame (list)
+  (loop for i in (reverse list)
+        thereis (and (typep i 'frame) i)
+        thereis (find-depth-first-frame (container-children i))))
 
 (defun main ()
   (with-main-loop
