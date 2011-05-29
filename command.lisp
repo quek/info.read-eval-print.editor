@@ -9,7 +9,7 @@
 (defun info.read-eval-print.editor.command::normal-mode ()
   (setf (mode-of *editor*) :normal)
   (setf (text-buffer-text (text-view-buffer (command-view-of *editor*))) "")
-  (widget-grab-focus (current-frame-of *editor*)))
+  (focus (current-frame-of *editor*)))
 
 (defun info.read-eval-print.editor.command::i ()
   (setf (mode-of *editor*) :insert)
