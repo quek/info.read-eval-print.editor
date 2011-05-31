@@ -44,9 +44,10 @@
 (defmethod focus ((frame frame))
   (widget-grab-focus (view-of frame)))
 
-(defun make-frame (&key (buffer (make-instance 'buffer)))
+(defun make-frame (&key (buffer (make-instance 'buffer))
+                     (show-line-numbers t))
   (let ((view (make-instance 'source-view
-                             :show-line-numbers t
+                             :show-line-numbers show-line-numbers
                              :wrap-mode :char))
         (status-view (make-instance 'source-view
                                     :buffer (make-instance 'buffer)
@@ -115,6 +116,7 @@
 
 (defclass* editor ()
   ((window)
+   (info-frame)
    (current-frame nil)
    (top-frame nil)
    (buffers nil)
@@ -136,11 +138,14 @@
   (cdr (assoc mode (dispatch-tables-of editor))))
 
 (defmethod dispatch-event ((dispatch-table dispatch-table) sender event-key)
-  (awhen (gethash (sort-keyseq (event-key-to-keyseq event-key))
-                  (table-of dispatch-table)
-                  (default-of dispatch-table))
-    (funcall it)
-    t))
+  (let ((key-seq (sort-keyseq (event-key-to-keyseq event-key))))
+    (p key-seq)
+    (awhen (gethash key-seq
+                    (table-of dispatch-table)
+                    (default-of dispatch-table))
+      (p it)
+      (funcall it)
+      t)))
 
 (defmethod dispatch-event :around ((dispatch-table temporary-dispatch-table) sender event-key)
   (aprog1 (call-next-method)
@@ -171,6 +176,8 @@
                               #\Return)
                              ((= #.(gdk:keyval-from-name "Escape") x)
                               #\Esc)
+                             ((= #.(gdk:keyval-from-name "Tab") x)
+                              #\Tab)
                              (t (gdk:keyval-to-char x)))))
 
 (defun buffer-text-view-key-press-event-cb (buffer-text-view event-key)
@@ -349,9 +356,18 @@
         thereis (and (typep i 'frame) i)
         thereis (find-depth-first-frame (container-children i))))
 
+(defun open-info-frame ()
+  (with-slots (info-frame) *editor*
+    (widget-show info-frame)))
+
+(defun close-info-frame ()
+  (with-slots (info-frame) *editor*
+    (widget-hide info-frame)))
+
 (defun main ()
   (with-main-loop
-    (let ((frame (make-frame)))
+    (let ((frame (make-frame))
+          (info-frame (make-frame :show-line-numbers nil)))
       (let-ui (gtk-window
                :type :toplevel
                :position :center
@@ -365,6 +381,9 @@
                  (:expr frame))
                 :expand t
                 :fill t
+                (:expr info-frame)
+                :expand t
+                :fill t
                 (source-view :var command-view
                              :buffer (make-instance 'buffer :name "command buffer")
                              :wrap-mode :char)
@@ -373,6 +392,7 @@
           (setf (frame-of cb) command-view)
           (setf *editor* (make-instance 'editor
                                         :window window
+                                        :info-frame info-frame
                                         :current-frame frame
                                         :top-frame top-frame
                                         :buffers (list (buffer-of frame))
@@ -384,4 +404,5 @@
         (connect-signal command-view "key-press-event" 'command-text-view-key-press-event-cb)
         (connect-signal command-view "key-release-event" 'command-text-view-key-release-event-cb)
 
-        (widget-show window)))))
+        (widget-show window)
+        (widget-hide info-frame)))))
