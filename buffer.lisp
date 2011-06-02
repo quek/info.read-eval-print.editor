@@ -66,9 +66,9 @@
   (setf (name-of buffer) (file-namestring file))
   (guess-language buffer)
   (if (probe-file file)
-      (progn
-        (setf (text-of buffer)
-              (collect 'string (scan-file file #'read-char))))
+      (setf (values (text-of buffer)
+                    (external-format-of buffer))
+            (read-file file))
       (progn
         (setf (text-of buffer) "")))
   (let ((*buffer* buffer))

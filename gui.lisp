@@ -39,7 +39,10 @@
         (or value "")))
 
 (defmethod update-status ((frame frame))
-  (setf (status-text frame) (name-of (buffer-of frame))))
+  (setf (status-text frame)
+        (format nil "~a  ~a"
+                (name-of (buffer-of frame))
+                (string-downcase (external-format-of (buffer-of frame))))))
 
 (defmethod focus ((frame frame))
   (widget-grab-focus (view-of frame)))
