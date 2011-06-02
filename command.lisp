@@ -43,6 +43,7 @@
     (awhen (find-symbol (string-upcase (car splited))
                         :info.read-eval-print.editor.command)
       (info.read-eval-print.editor.command::normal-mode)
+      (close-info-frame)
       (apply it (cdr splited)))))
 
 (defun info.read-eval-print.editor.command::digit-argument-n (n)
