@@ -11,7 +11,7 @@
   ((frame)
    (name nil)
    (file nil)
-   (yank "AAAA")
+   (yank "")
    (digit-argument nil :accessor nil)
    (external-format :utf-8))
   (:metaclass gobject-class))

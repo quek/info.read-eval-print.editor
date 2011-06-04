@@ -17,7 +17,6 @@
       (read-sequence buffer s)
       (jp:make-encoding (jp:guess buffer :jp)))))
 
-
 (defun read-file (path)
   (let ((external-format (or (guess-file-encoding path) :default))
         (buffer (make-array 8192 :element-type 'character)))
@@ -28,3 +27,8 @@
                while (plusp len)
                do (write-sequence buffer out :end len))))
      external-format)))
+
+
+(defun len=1 (list)
+  (and (consp list)
+       (null (cdr list))))

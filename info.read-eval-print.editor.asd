@@ -9,4 +9,4 @@
                (:file "buffer")
                (:file "gui")
                (:file "command"))
-  :depends-on (:cl-gtk2-gtk :cl-ppcre :hu.dwim.defclass-star :jp :quek))
+  :depends-on (:cl-gtk2-gtk :cl-ppcre :hu.dwim.defclass-star :jp :swank :quek))

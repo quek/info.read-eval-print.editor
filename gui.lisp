@@ -359,9 +359,10 @@
         thereis (and (typep i 'frame) i)
         thereis (find-depth-first-frame (container-children i))))
 
-(defun open-info-frame ()
+(defun open-info-frame (&optional (text ""))
   (with-slots (info-frame) *editor*
-    (widget-show info-frame)))
+    (widget-show info-frame)
+    (setf (text-of (buffer-of info-frame)) text)))
 
 (defun close-info-frame ()
   (with-slots (info-frame) *editor*

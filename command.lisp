@@ -1,5 +1,9 @@
 (in-package :info.read-eval-print.editor)
 
+(defmacro define-command-alias (command &rest aliases)
+  `(progn
+     ,@(let ((x (scan aliases)))
+         (collect `(setf (fdefinition ',x) (fdefinition ',command))))))
 
 (defun info.read-eval-print.editor.command::command-mode ()
   (setf (mode-of *editor*) :command)
@@ -31,6 +35,9 @@
     (setf (buffer-of *frame*) *buffer*)
     (update-status *frame*)
     (focus *frame*)))
+(define-command-alias
+    info.read-eval-print.editor.command::e
+    info.read-eval-print.editor.command::edit)
 
 
 (defun info.read-eval-print.editor.command::q ()
@@ -67,7 +74,7 @@
   (window-close *editor* (current-frame-of *editor*))
   (focus (current-frame-of *editor*)))
 
-
+#+nil
 (defun info.read-eval-print.editor.command::command-mode-completion ()
   (let* ((input (text-of *buffer*))
          (pos (text-iter-offset (iter-at-mark *buffer*)))
@@ -87,6 +94,34 @@
             (let ((iter (iter-at-mark *buffer*)))
               (setf (text-iter-offset iter) pos)
               (update-cursor *buffer* iter)))))))
+
+(defun info.read-eval-print.editor.command::simple-completion ()
+  (let* ((input (text-of *buffer*))
+         (pos (text-iter-offset (iter-at-mark *buffer*)))
+         (splited (ppcre:split "\\s" input :start 1)))
+    (if (len=1 splited)
+        ;; コマンドの補完
+        (let ((commands (car (swank:simple-completions (car splited) "info.read-eval-print.editor.command"))))
+          (if (len=1 commands)
+              (setf (text-of *buffer*) (str ":" (car commands)))
+              (open-info-frame (with-output-to-string (out)
+                                 (iterate ((x (scan commands)))
+                                   (format out "~a~%" x))))))
+        ;; きっとファイルの補完
+        (let* ((butlast (butlast splited))
+               (path (car (last splited)))
+               (files (directory (str path "*"))))
+          (if (len=1 files)
+              (setf (text-of *buffer*)
+                    (format nil "~{~a~^ ~}" `(":" ,@butlast ,(car files))))
+              (progn
+                (open-info-frame (with-output-to-string (out)
+                                   (iterate ((file (scan files)))
+                                     (format out "~a~%" file))))
+                (let ((iter (iter-at-mark *buffer*)))
+                  (setf (text-iter-offset iter) pos)
+                  (update-cursor *buffer* iter))))))))
+
 
 
 ;; normal
@@ -138,8 +173,8 @@
              ((#\Esc) info.read-eval-print.editor.command::normal-mode)
              ((:control #\m) info.read-eval-print.editor.command::run-command)
              ((#\Return) info.read-eval-print.editor.command::run-command)
-             ((:control #\i) info.read-eval-print.editor.command::command-mode-completion)
-             ((#\Tab) info.read-eval-print.editor.command::command-mode-completion))
+             ((:control #\i) info.read-eval-print.editor.command::simple-completion)
+             ((#\Tab) info.read-eval-print.editor.command::simple-completion))
       do (set-command *command-dispatch-table* keyseq command))
 
 ;; normal - g
