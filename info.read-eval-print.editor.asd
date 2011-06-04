@@ -7,6 +7,7 @@
                (:file "util")
                (:file "config")
                (:file "buffer")
+               (:file "mode")
                (:file "gui")
                (:file "command"))
-  :depends-on (:cl-gtk2-gtk :cl-ppcre :hu.dwim.defclass-star :jp :swank :quek))
+  :depends-on (:cl-gtk2-gtk :cl-ppcre :hu.dwim.defclass-star :jp :swank :closer-mop :quek))

@@ -13,7 +13,8 @@
    (file nil)
    (yank "")
    (digit-argument nil :accessor nil)
-   (external-format :utf-8))
+   (external-format :utf-8)
+   (mode (make-instance 'fundamental-mode)))
   (:metaclass gobject-class))
 
 (defmethod initialize-instance :after ((buffer buffer) &rest initargs)
