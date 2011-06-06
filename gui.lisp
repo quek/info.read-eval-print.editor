@@ -94,28 +94,7 @@
         (dispatch-table-to-restore-of self)))
 
 
-(defvar *normal-dispatch-table*  (make-instance 'dispatch-table :default (constantly t)))
-(defvar *insert-dispatch-table*  (make-instance 'dispatch-table))
 (defvar *command-dispatch-table* (make-instance 'dispatch-table))
-
-(defvar *normal-g-dispatch-table*
-  (make-instance 'temporary-dispatch-table
-                 :mode :normal
-                 :dispatch-table-to-restore *normal-dispatch-table*
-                 :default (constantly t)))
-
-(defvar *normal-y-dispatch-table*
-  (make-instance 'temporary-dispatch-table
-                 :mode :normal
-                 :dispatch-table-to-restore *normal-dispatch-table*
-                 :default (constantly t)))
-
-(defvar *normal-ctl-w-dispatch-table*
-  (make-instance 'temporary-dispatch-table
-                 :mode :normal
-                 :dispatch-table-to-restore *normal-dispatch-table*
-                 :default (constantly t)))
-
 
 (defclass* editor ()
   ((window)
@@ -127,9 +106,7 @@
    (current-buffer)
    (command-buffer)
    (command-view)
-   (dispatch-tables `((:normal . ,*normal-dispatch-table*)
-                      (:insert . ,*insert-dispatch-table*)
-                      (:command . ,*command-dispatch-table*)))
+   (dispatch-tables `((:command . ,*command-dispatch-table*)))
    (command-key-bindings)
    (mode :normal :type (member :normal :insert :command))))
 
@@ -184,10 +161,12 @@
                              (t (gdk:keyval-to-char x)))))
 
 (defun buffer-text-view-key-press-event-cb (buffer-text-view event-key)
-  (let ((dispatch-table (dispatch-table *editor*))
+  (let ((keyseq (sort-keyseq (event-key-to-keyseq event-key)))
         (*frame* buffer-text-view)
         (*buffer* (current-buffer-of *editor*)))
-    (dispatch-event dispatch-table buffer-text-view event-key)))
+    (awhen (key-binding (mode-of *buffer*) keyseq (mode-of *editor*))
+      (funcall it)
+      t)))
 
 
 (defun buffer-text-view-key-release-event-cb (buffer-text-view event-key)
