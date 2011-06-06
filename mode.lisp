@@ -112,6 +112,8 @@
 (define-mode common-lisp-mode (lisp-mode)
   ())
 
+(pushnew '("\\.lisp$" . common-lisp-mode) *auto-mode-alist* :test #'equal)
+
 (define-mode show-paren-mode ()
   ())
 

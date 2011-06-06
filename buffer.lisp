@@ -62,10 +62,22 @@
 (defun end-iter (buffer)
   (text-buffer-get-end-iter buffer))
 
+(defvar *auto-mode-alist* nil)
+
+(defun auto-mode (file)
+  (collect-first
+   (#Mcdr
+    (choose-if (lambda (x)
+                 (when (ppcre:scan (car x) (string file))
+                   (cdr x)))
+               (scan *auto-mode-alist*)))))
+
 (defmethod find-file (buffer file)
   (setf (file-of buffer) file)
   (setf (name-of buffer) (file-namestring file))
   (guess-language buffer)
+  (awhen (auto-mode file)
+    (enable-mode (mode-of buffer) it))
   (if (probe-file file)
       (setf (values (text-of buffer)
                     (external-format-of buffer))
