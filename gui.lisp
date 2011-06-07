@@ -120,11 +120,9 @@
 
 (defmethod dispatch-event ((dispatch-table dispatch-table) sender event-key)
   (let ((key-seq (sort-keyseq (event-key-to-keyseq event-key))))
-    (p key-seq)
     (awhen (gethash key-seq
                     (table-of dispatch-table)
                     (default-of dispatch-table))
-      (p it)
       (funcall it)
       t)))
 
@@ -152,6 +150,8 @@
                         (event-key-state event-key))
         if (eq :control-mask x)
           collect :control
+        else if (eq :super-mask x)
+               collect :super
         else if (numberp x)
                collect (cond ((= #.(gdk:keyval-from-name "Return") x)
                               #\Return)

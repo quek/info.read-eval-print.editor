@@ -88,17 +88,13 @@
        (defvar ,key-map (make-instance 'key-map))
        (defclass* ,mode ,(or super-modes (list 'mode))
          ,slots
-         (:default-initargs :key-map ,key-map)
-         ,@class-options))))
+         ,@class-options)
+       (defmethod key-binding or ((mode ,mode) keyseq &optional (editor-mode (mode-of *editor*)))
+         (get-key ,key-map editor-mode keyseq)))))
 
 
 (defclass* mode ()
-  ((name nil)
-   (key-map (make-instance 'key-map))))
-
-(defmethod key-binding or ((mode mode) keyseq &optional (editor-mode (mode-of *editor*)))
-  (get-key (key-map-of mode) editor-mode keyseq))
-
+  ((name nil)))
 
 (defmethod key-map ((mode mode) editor-mode)
   (key-map (key-map-of mode) editor-mode))
@@ -158,7 +154,6 @@
            ((#\u) info.read-eval-print.editor.command::undo)
            ((:control #\r) info.read-eval-print.editor.command::redo)
            ((#\p) info.read-eval-print.editor.command::paste-below-cursor)
-           ((#\e) info.read-eval-print.editor.command::eval-last-sexp)
            ((#\g) ,(lambda () (push-temp-key-map *fundamental-mode-map* *g-key-map*)))
            ((#\y) ,(lambda () (push-temp-key-map *fundamental-mode-map* *y-key-map*)))
            ((:control #\w) ,(lambda () (push-temp-key-map *fundamental-mode-map* *ctl-w-key-map*))))
@@ -192,6 +187,11 @@
            ((#\l) ,(lambda () (window-l *editor*))))
       do (set-key *ctl-w-key-map* :normal keyseq command))
 
+
+(loop for (mode keyseq command)
+      in `((:normal (:super #\e) info.read-eval-print.editor.command::eval-last-sexp)
+           (:insert (:super #\e) info.read-eval-print.editor.command::eval-last-sexp))
+      do (set-key *common-lisp-mode-map*  mode keyseq command))
 
 
 
