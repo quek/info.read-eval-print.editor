@@ -160,6 +160,11 @@
     (insert buffer (prin1-to-string (eval (read-from-string (slice buffer start end)))))))
 
 
+(defmacro save-excursiono (&body body)
+  `(let ((pos (point *buffer*)))
+     (unwind-protect (progn ,@body)
+       (setf (point *buffer*) pos))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; command
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -271,3 +276,21 @@
 
 (define-command eval-last-sexp ()
   (last-sexp *buffer*))
+
+(define-command looking-at (regexp)
+  (ppcre:scan (str "^" regexp) (text-of *buffer*) :start (point *buffer*)))
+
+(define-command line-number-at-pos ()
+  (text-iter-line (iter-at-mark *buffer*)))
+
+(define-command current-column ()
+  (text-iter-line-offset (iter-at-mark *buffer*)))
+
+(define-command back-to-indentation ()
+  (let ((iter (iter-at-mark *buffer*)))
+    (setf (text-iter-line-offset iter) 0)
+    (awhen (ppcre:scan (ppcre:create-scanner "\\S|$" :multi-line-mode t)
+                       (text-of *buffer*)
+                       :start (text-iter-offset iter))
+      (setf (text-iter-line-offset iter) it)
+      (update-cursor *buffer* iter))))

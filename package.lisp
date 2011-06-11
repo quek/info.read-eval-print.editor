@@ -13,5 +13,7 @@
 (series::install :pkg :info.read-eval-print.editor :implicit-map t)
 
 
-(defpackage :info.read-eval-print.editor.command)
+(defpackage :info.read-eval-print.editor.command
+  (:use)
+  (:import-from :cl #:setf))
 

@@ -6,7 +6,8 @@
 
 
 (define-command indent :in common-lisp-mode ()
-  (info.read-eval-print.editor.command::insert "common lisp indent"))
+  (funcall (read-from-string "INFO.READ-EVAL-PRINT.EDITOR.CL-INDENT:COMMON-LISP-INDENT-FUNCTION")
+           (info.read-eval-print.editor.command::point) nil))
 
 
 (loop for (mode keyseq command)

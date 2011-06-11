@@ -19,7 +19,8 @@
            (lf-p (not (ignore-errors (layered-function-definer name)))))
       `(progn
          ,@(when lf-p
-             `((define-layered-function ,name ,(let ((x (scan args)))
+             `((export ',name :info.read-eval-print.editor.command)
+               (define-layered-function ,name ,(let ((x (scan args)))
                                                  (collect (if (consp x)
                                                               (car x)
                                                               x))))))
@@ -29,9 +30,10 @@
   (let ((command (command-intern command)))
     `(progn
        ,@(let ((x (scan aliases)))
-           (collect `(setf (fdefinition ',(command-intern x))
-                           (fdefinition ',command)))))))
-
+           (collect `(progn
+                       (setf (fdefinition ',(command-intern x))
+                             (fdefinition ',command))
+                       (export ',(command-intern x) :info.read-eval-print.editor.command)))))))
 
 (define-command command-mode ()
   (setf (mode-of *editor*) :command)

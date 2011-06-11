@@ -12,5 +12,6 @@
                (:file "buffer")
                (:file "mode")
                (:file "gui")
-               (:file "common-lisp"))
+               (:file "common-lisp")
+               (:file "cl-indent"))
   :depends-on (:cl-gtk2-gtk :cl-ppcre :hu.dwim.defclass-star :jp :swank :closer-mop :contextl :quek))
