@@ -157,13 +157,20 @@
                               #\Tab)
                              (t (gdk:keyval-to-char x)))))
 
+
 (defun buffer-text-view-key-press-event-cb (buffer-text-view event-key)
-  (let ((keyseq (sort-keyseq (event-key-to-keyseq event-key)))
-        (*frame* buffer-text-view)
-        (*buffer* (current-buffer-of *editor*)))
-    (awhen (get-key-binding (mode-of *buffer*) keyseq (mode-of *editor*))
-      (funcall it)
-      t)))
+  (let* ((keyseq (sort-keyseq (event-key-to-keyseq event-key)))
+         (*frame* buffer-text-view)
+         (*buffer* (current-buffer-of *editor*))
+         (mode (mode-of *buffer*)))
+    (aif (get-key-binding mode keyseq (mode-of *editor*))
+         (progn (funcall-with-mode mode it)
+                t)
+         (if (eq :normal (mode-of *editor*))
+             ;; :normal モードでバインディングがないキーは無視。
+             (constantly t)
+             ;; :insert モードでバインディングがないキーは gtk のデフォルトの動作
+             nil))))
 
 
 (defun buffer-text-view-key-release-event-cb (buffer-text-view event-key)

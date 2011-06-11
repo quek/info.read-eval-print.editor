@@ -83,6 +83,11 @@
                               keyseq
                               editor-mode))
 
+(defun funcall-with-mode (mode function &rest args)
+  (apply-with-layer-context (mode-layer-context mode)
+                            function
+                            args))
+
 (define-layered-method key-binding or (mode keyseq editor-mode)
   (declare (ignore editor-mode))
   nil)
