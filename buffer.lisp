@@ -1,8 +1,5 @@
 (in-package :info.read-eval-print.editor)
 
-(defvar *buffer*)
-
-(defparameter *default-buffer-style-scheme* "oblivion")
 
 (define-symbol-macro *digit-argument*
     (or (digit-argument-of *buffer*) 1))
@@ -14,7 +11,7 @@
    (yank "")
    (digit-argument nil :accessor nil)
    (external-format :utf-8)
-   (mode (make-instance 'fundamental-mode)))
+   (mode (make-instance 'mode)))
   (:metaclass gobject-class))
 
 (defmethod initialize-instance :after ((buffer buffer) &rest initargs)

@@ -1,49 +1,40 @@
 (in-package :info.read-eval-print.editor)
 
 
-(defun anonymous-class-p (class)
-  (null (class-name class)))
-
-(defgeneric enable-mode (mode mode-to-enable &rest initargs)
-  (:method (mode mode-to-enable &rest initargs)
-    (let* ((current-class (class-of mode))
-           (superclasses (cons(find-class mode-to-enable)
-                              (if (anonymous-class-p current-class)
-                                  (c2mop:class-direct-superclasses current-class)
-                                  (list current-class))))
-           (new-class (make-instance 'c2mop:standard-class
-                                     :direct-superclasses superclasses)))
-      (apply #'change-class mode new-class initargs))))
-
-(defgeneric disable-mode (mode mode-to-disable &rest initargs)
-  (:method (mode mode-to-disable &rest initargs)
-    (let* ((current-class (class-of mode))
-           (superclasses (remove (find-class mode-to-disable)
-                                 (c2mop:class-direct-superclasses current-class)))
-           (new-class (make-instance 'c2mop:standard-class
-                                     :direct-superclasses superclasses)))
-      (apply #'change-class mode new-class initargs))))
-
-(defgeneric enabled-mode (mode)
-  (:method (mode)
-    (let ((class (class-of mode)))
-      (if (anonymous-class-p class)
-          (collect (class-name (scan (c2mop:class-direct-superclasses class))))
-          (list (class-name class))))))
-
-(defgeneric key-binding (mode-or-key-map keyseq &optional editor-mode)
-  (:method-combination or))
-
-
-(defgeneric key-map-table (key-map editor-mode)
-  (:method (key-map (editor-mode (eql :normal)))
-    (normal-of key-map))
-  (:method (key-map (editor-mode (eql :insert)))
-    (insert-of key-map)))
-
 (defgeneric get-key (key-map editor-mode keyseq))
 
 (defgeneric set-key (key-map editor-mode keyseq command &optional restore-temp-key-map))
+
+(defgeneric push-temp-key-map (key-map temp-key-map))
+
+(defgeneric pop-temp-key-map (key-map))
+
+(defgeneric key-map-table (key-map editor-mode))
+
+
+(defgeneric enable-mode (mode &rest mode-to-enable))
+
+(defgeneric disable-mode (mode &rest mode-to-disable))
+
+(define-layered-function key-binding (mode keyseq editor-mode)
+  (:method-combination or))
+
+
+
+(defun anonymous-class-p (class)
+  (null (class-name class)))
+
+
+(defclass* key-map ()
+  ((normal (make-hash-table :test #'equal))
+   (insert (make-hash-table :test #'equal))
+   (inherits nil)
+   (temp-key-map nil)))
+
+(defmethod key-map-table (key-map (editor-mode (eql :normal)))
+  (normal-of key-map))
+(defmethod key-map-table (key-map (editor-mode (eql :insert)))
+  (insert-of key-map))
 
 (defmethod get-key (key-map editor-mode keyseq)
   (aif (temp-key-map-of key-map)
@@ -66,19 +57,47 @@
           do (error "invalid keyseq ~a." keyseq))
   (call-next-method key-map editor-mode keyseq command restore-temp-key-map))
 
-(defgeneric push-temp-key-map (key-map temp-key-map)
-  (:method (key-map temp-key-map)
-    (push temp-key-map (temp-key-map-of key-map))))
+(defmethod push-temp-key-map (key-map temp-key-map)
+  (push temp-key-map (temp-key-map-of key-map)))
 
-(defgeneric pop-temp-key-map (key-map)
-  (:method (key-map)
-    (pop (temp-key-map-of key-map))))
+(defmethod pop-temp-key-amp (key-map)
+  (pop (temp-key-map-of key-map)))
 
-(defclass* key-map ()
-  ((normal (make-hash-table :test #'equal))
-   (insert (make-hash-table :test #'equal))
-   (inherits nil)
-   (temp-key-map nil)))
+
+
+(define-layered-class mode ()
+  ((enabled-modes :initarg :enabled-modes
+                  :initform `(fundamental-mode)
+                  :accessor enabled-modes-of)))
+
+(defun mode-layer-context (mode)
+  (collect-fn t #'current-layer-context
+              (lambda (context layer)
+                (adjoin-layer layer context))
+              (scan (enabled-modes-of mode))))
+
+(defun get-key-binding (mode keyseq &optional (editor-mode (mode-of *editor*)))
+  (funcall-with-layer-context (mode-layer-context mode)
+                              #'key-binding
+                              mode
+                              keyseq
+                              editor-mode))
+
+(define-layered-method key-binding or (mode keyseq editor-mode)
+  (declare (ignore editor-mode))
+  nil)
+
+(defmethod enable-mode (mode &rest mode-to-enable)
+  (let ((xs (append mode-to-enable (enabled-modes-of mode))))
+    (setf (enabled-modes-of mode)
+          (delete-duplicates xs :from-end t))))
+
+(defmethod disable-mode (mode &rest mode-to-disable)
+  (iterate ((x (scan mode-to-disable)))
+    (setf (enabled-modes-of mode)
+          (delete x (enabled-modes-of mode)))))
+
+
 
 (defmacro define-mode (mode (&rest super-modes)
                        (&rest slots)
@@ -86,36 +105,26 @@
   (let ((key-map (sym "*" mode "-MAP*")))
     `(progn
        (defvar ,key-map (make-instance 'key-map))
-       (defclass* ,mode ,(or super-modes (list 'mode))
+       (deflayer ,mode ,super-modes)
+       (define-layered-class mode :in ,mode
          ,slots
          ,@class-options)
-       (defmethod key-binding or ((mode ,mode) keyseq &optional (editor-mode (mode-of *editor*)))
-         (get-key ,key-map editor-mode keyseq)))))
+       (define-layered-method key-binding :in ,mode or (mode keyseq editor-mode)
+                              (get-key ,key-map editor-mode keyseq)))))
 
+(define-mode fundamental-mode () ())
 
-(defclass* mode ()
-  ((name nil)))
+(define-mode lisp-mode () ())
 
-(defmethod key-map ((mode mode) editor-mode)
-  (key-map (key-map-of mode) editor-mode))
-
-(define-mode fundamental-mode ()
-  ())
-
-(define-mode lisp-mode ()
-  ())
-
-(define-mode common-lisp-mode (lisp-mode)
-  ())
+(define-mode common-lisp-mode (lisp-mode) ())
 
 (pushnew '("\\.lisp$" . common-lisp-mode) *auto-mode-alist* :test #'equal)
 
-(define-mode show-paren-mode ()
-  ())
+(define-mode show-paren-mode () ())
 
 (defmethod print-object ((x mode) stream)
   (print-unreadable-object (x stream)
-    (format stream "~a ~(~{~a~^ ~}~)" (name-of x) (enabled-mode x))))
+    (format stream "~a ~(~{~a~^ ~}~)" (name-of x) (enabled-modes-of x))))
 
 
 
@@ -193,33 +202,3 @@
            (:insert (:super #\e) info.read-eval-print.editor.command::eval-last-sexp))
       do (set-key *common-lisp-mode-map*  mode keyseq command))
 
-
-
-(let ((x (make-instance 'fundamental-mode :name "*scratch*")))
-  (print x)
-  (enable-mode x 'common-lisp-mode)
-  (print x)
-  (enable-mode x 'show-paren-mode)
-  (print x)
-  (disable-mode x 'common-lisp-mode)
-  (print x)
-  (disable-mode x 'show-paren-mode)
-  (print x))
-;;-> 
-;;   #<*scratch* fundamental-mode> 
-;;   #<*scratch* common-lisp-mode fundamental-mode> 
-;;   #<*scratch* show-paren-mode common-lisp-mode fundamental-mode> 
-;;   #<*scratch* show-paren-mode fundamental-mode> 
-;;   #<*scratch* fundamental-mode> 
-;;=> #<*scratch* fundamental-mode>
-
-(let ((x (make-instance 'c2cl:standard-class
-                        :direct-superclasses (list (find-class 'common-lisp-mode)
-                                                   (find-class 'show-paren-mode)))))
-  (print (c2mop:class-direct-superclasses x))
-  (print (make-instance x :name "ま"))
-  x)
-;;-> 
-;;   (#<STANDARD-CLASS COMMON-LISP-MODE> #<STANDARD-CLASS SHOW-PAREN-MODE>) 
-;;   #<ま common-lisp-mode show-paren-mode> 
-;;=> #<STANDARD-CLASS NIL {1008B5C691}>

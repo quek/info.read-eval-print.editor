@@ -3,7 +3,7 @@
 (macrolet
     ((m ()
        `(defpackage :info.read-eval-print.editor
-          (:use :cl :gtk :gdk :gobject :series :quek :anaphora)
+          (:use :cl :gtk :gdk :gobject :series :quek :anaphora :contextl)
           (:shadowing-import-from :series ,@series::/series-forms/)
           (:import-from :hu.dwim.defclass-star #:defclass*)
           (:shadow #:frame)             ; gtk:frame

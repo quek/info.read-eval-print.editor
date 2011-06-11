@@ -1,5 +1,8 @@
 (in-package :info.read-eval-print.editor)
 
+(defparameter *default-buffer-style-scheme* "oblivion")
+(defparameter *default-status-style-scheme* "classic")
+
 (defparameter *src-location* (asdf:component-pathname (asdf:find-system :info.read-eval-print.editor)))
 
 ;; ./language-specs を追加して Common Lisp にも対応。

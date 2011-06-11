@@ -1,9 +1,5 @@
 (in-package :info.read-eval-print.editor)
 
-(defvar *editor*)
-(defvar *frame*)
-(defparameter *default-status-style-scheme* "classic")
-
 (defgeneric view-of (frame))
 
 (defgeneric buffer-of (frame))
@@ -43,7 +39,7 @@
         (format nil "~a  ~(~a ~{~a~^ ~}~)"
                 (name-of (buffer-of frame))
                 (external-format-of (buffer-of frame))
-                (enabled-mode (mode-of (buffer-of frame))))))
+                (enabled-modes-of (mode-of (buffer-of frame))))))
 
 (defmethod focus ((frame frame))
   (widget-grab-focus (view-of frame)))
@@ -165,7 +161,7 @@
   (let ((keyseq (sort-keyseq (event-key-to-keyseq event-key)))
         (*frame* buffer-text-view)
         (*buffer* (current-buffer-of *editor*)))
-    (awhen (key-binding (mode-of *buffer*) keyseq (mode-of *editor*))
+    (awhen (get-key-binding (mode-of *buffer*) keyseq (mode-of *editor*))
       (funcall it)
       t)))
 
