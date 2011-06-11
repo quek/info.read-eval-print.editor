@@ -4,3 +4,4 @@
 (defvar *frame*)
 (defvar *buffer*)
 
+(defvar *auto-mode-alist* nil)

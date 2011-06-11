@@ -60,7 +60,7 @@
 (defmethod push-temp-key-map (key-map temp-key-map)
   (push temp-key-map (temp-key-map-of key-map)))
 
-(defmethod pop-temp-key-amp (key-map)
+(defmethod pop-temp-key-map (key-map)
   (pop (temp-key-map-of key-map)))
 
 

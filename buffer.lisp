@@ -1,19 +1,6 @@
 (in-package :info.read-eval-print.editor)
 
 
-(define-symbol-macro *digit-argument*
-    (or (digit-argument-of *buffer*) 1))
-
-(defclass* buffer (source-buffer)
-  ((frame)
-   (name nil)
-   (file nil)
-   (yank "")
-   (digit-argument nil :accessor nil)
-   (external-format :utf-8)
-   (mode (make-instance 'mode)))
-  (:metaclass gobject-class))
-
 (defmethod initialize-instance :after ((buffer buffer) &rest initargs)
   (declare (ignore initargs))
   (setf (style-scheme buffer) *default-buffer-style-scheme*))
@@ -59,7 +46,6 @@
 (defun end-iter (buffer)
   (text-buffer-get-end-iter buffer))
 
-(defvar *auto-mode-alist* nil)
 
 (defun auto-mode (file)
   (collect-first
@@ -170,17 +156,17 @@
 ;;;; command
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun info.read-eval-print.editor.command::backward-char (&optional (count *digit-argument*))
+(define-command backward-char (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))
     (text-iter-move iter :count count :direction :backward)
     (update-cursor *buffer* iter)))
 
-(defun info.read-eval-print.editor.command::forward-char (&optional (count *digit-argument*))
+(define-command forward-char (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))
     (text-iter-move iter :count count :direction :forward)
     (update-cursor *buffer* iter)))
 
-(defun info.read-eval-print.editor.command::next-line (&optional (count *digit-argument*))
+(define-command next-line (&optional (count *digit-argument*))
   (let* ((iter (iter-at-mark *buffer*))
          (line-offset (text-iter-line-offset iter)))
     ;; (loop repeat count do (text-view-forward-display-line (frame-of *buffer*) iter))
@@ -191,7 +177,7 @@
     (update-cursor *buffer* iter)))
 
 
-(defun info.read-eval-print.editor.command::previous-line (&optional (count *digit-argument*))
+(define-command previous-line (&optional (count *digit-argument*))
   (let* ((iter (iter-at-mark *buffer*))
          (line-offset (text-iter-line-offset iter)))
     ;; (loop repeat count do (text-view-backward-display-line (frame-of *buffer*) iter))
@@ -200,44 +186,44 @@
     (update-cursor *buffer* iter)))
 
 
-(defun info.read-eval-print.editor.command::beginning-of-buffer ()
+(define-command beginning-of-buffer ()
   (let ((iter (start-iter *buffer*)))
     (update-cursor *buffer* iter)))
 
-(defun info.read-eval-print.editor.command::end-of-buffer ()
+(define-command end-of-buffer ()
   (let ((iter (end-iter *buffer*)))
     (update-cursor *buffer* iter)))
 
-(defun info.read-eval-print.editor.command::end-of-line ()
+(define-command end-of-line ()
   (let ((iter (iter-at-mark *buffer*)))
     (text-iter-forward-to-line-end iter)
     (update-cursor *buffer* iter)))
 
-(defun info.read-eval-print.editor.command::forward-sexp (&optional (count *digit-argument*))
+(define-command forward-sexp (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))
     (forward-sexp iter count )
     (update-cursor *buffer* iter)))
 
 
-(defun info.read-eval-print.editor.command::backward-sexp (&optional (count *digit-argument*))
+(define-command backward-sexp (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))
     (backward-sexp iter count)
     (update-cursor *buffer* iter)))
 
 
-(defun info.read-eval-print.editor.command::delete-char (&optional (count *digit-argument*))
+(define-command delete-char (&optional (count *digit-argument*))
   (let ((start (iter-at-mark *buffer*))
         (end (iter-at-mark *buffer*)))
     (text-iter-move end :count count)
     (text-buffer-delete *buffer* start end)))
 
-(defun info.read-eval-print.editor.command::backward-delete-char (&optional (count *digit-argument*))
+(define-command backward-delete-char (&optional (count *digit-argument*))
   (let ((start (iter-at-mark *buffer*))
         (end (iter-at-mark *buffer*)))
     (text-iter-move start :count count :direction :backward)
     (text-buffer-delete *buffer* start end)))
 
-(defun info.read-eval-print.editor.command::yank-current-line (&optional (count *digit-argument*))
+(define-command yank-current-line (&optional (count *digit-argument*))
   (let ((start (iter-at-mark *buffer*))
         (end (iter-at-mark *buffer*)))
     (setf (text-iter-line-offset start) 0)
@@ -246,23 +232,23 @@
     (text-iter-forward-to-line-end end)
     (setf (yank-of *buffer*) (slice *buffer* start end))))
 
-(defun info.read-eval-print.editor.command::paste-below-cursor (&optional (count *digit-argument*))
+(define-command paste-below-cursor (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))
     (setf (text-iter-line-offset iter) 0)
     (dotimes (i count)
       (insert *buffer* (format nil "~a~%" (yank-of *buffer*)) :position iter))))
 
-(defun info.read-eval-print.editor.command::w ()
+(define-command w ()
   (let ((*buffer* (current-buffer-of *editor*)))
    (save-buffer *buffer*)))
 
-(defun info.read-eval-print.editor.command::undo (&optional (count *digit-argument*))
+(define-command undo (&optional (count *digit-argument*))
   (dotimes (i count)
     (source-buffer-undo *buffer*)))
 
-(defun info.read-eval-print.editor.command::redo (&optional (count *digit-argument*))
+(define-command redo (&optional (count *digit-argument*))
   (dotimes (i count)
     (source-buffer-redo *buffer*)))
 
-(defun info.read-eval-print.editor.command::eval-last-sexp ()
+(define-command eval-last-sexp ()
   (last-sexp *buffer*))

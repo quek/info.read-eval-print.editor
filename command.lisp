@@ -1,13 +1,19 @@
 (in-package :info.read-eval-print.editor)
 
 
+(define-symbol-macro *digit-argument*
+    (or (digit-argument-of *buffer*) 1))
+
 (defmacro define-command (&whole form name &body body)
   (multiple-value-bind (layer-arg layer qualifiers args method-body)
       (contextl::parse-method-body form body)
     (declare (ignore layer-arg layer qualifiers method-body))
     (let ((name (intern (symbol-name name) :info.read-eval-print.editor.command)))
       `(progn
-         (define-layered-function ,name ,args)
+         (define-layered-function ,name ,(let ((x (scan args)))
+                                           (collect (if (consp x)
+                                                        (car x)
+                                                        x))))
          (define-layered-method ,name ,@body)))))
 
 (defmacro define-command-alias (command &rest aliases)
@@ -132,15 +138,3 @@
                 (let ((iter (iter-at-mark *buffer*)))
                   (setf (text-iter-offset iter) pos)
                   (update-cursor *buffer* iter))))))))
-
-
-;; command
-(loop for (keyseq command)
-      in `(((:control #\c) info.read-eval-print.editor.command::normal-mode)
-           ((:control #\[) info.read-eval-print.editor.command::normal-mode)
-           ((#\Esc) info.read-eval-print.editor.command::normal-mode)
-           ((:control #\m) info.read-eval-print.editor.command::run-command)
-           ((#\Return) info.read-eval-print.editor.command::run-command)
-           ((:control #\i) info.read-eval-print.editor.command::simple-completion)
-           ((#\Tab) info.read-eval-print.editor.command::simple-completion))
-      do (set-command *command-dispatch-table* keyseq command))

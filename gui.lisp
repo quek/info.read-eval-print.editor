@@ -4,10 +4,6 @@
 
 (defgeneric buffer-of (frame))
 
-(defclass* frame (v-box)
-  ((view :reader t)
-   (status-view :reader t))
-  (:metaclass gobject-class))
 
 (defmethod initialize-instance :after ((frame frame) &rest args &key buffer)
   (declare (ignore args))
@@ -90,22 +86,6 @@
   (setf (dispatch-table *editor* (mode-of self))
         (dispatch-table-to-restore-of self)))
 
-
-(defvar *command-dispatch-table* (make-instance 'dispatch-table))
-
-(defclass* editor ()
-  ((window)
-   (info-frame)
-   (current-frame nil)
-   (top-frame nil)
-   (buffers nil)
-   (buffer-key-bindings)
-   (current-buffer)
-   (command-buffer)
-   (command-view)
-   (dispatch-tables `((:command . ,*command-dispatch-table*)))
-   (command-key-bindings)
-   (mode :normal :type (member :normal :insert :command))))
 
 (defmethod (setf dispatch-table) (dispatch-table editor mode)
   (setf (cdr (assoc mode (dispatch-tables-of editor)))
@@ -350,6 +330,20 @@
 (defun close-info-frame ()
   (with-slots (info-frame) *editor*
     (widget-hide info-frame)))
+
+
+(defvar *command-dispatch-table* (make-instance 'dispatch-table))
+;; command
+(loop for (keyseq command)
+      in `(((:control #\c) info.read-eval-print.editor.command::normal-mode)
+           ((:control #\[) info.read-eval-print.editor.command::normal-mode)
+           ((#\Esc) info.read-eval-print.editor.command::normal-mode)
+           ((:control #\m) info.read-eval-print.editor.command::run-command)
+           ((#\Return) info.read-eval-print.editor.command::run-command)
+           ((:control #\i) info.read-eval-print.editor.command::simple-completion)
+           ((#\Tab) info.read-eval-print.editor.command::simple-completion))
+      do (set-command *command-dispatch-table* keyseq command))
+
 
 (defun main ()
   (with-main-loop
