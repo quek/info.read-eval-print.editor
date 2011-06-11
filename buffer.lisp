@@ -40,6 +40,14 @@
   (text-buffer-get-iter-at-mark buffer
                                 (text-buffer-insertion-mark buffer)))
 
+(defun point (buffer)
+  (text-iter-offset (iter-at-mark buffer)))
+
+(defun (setf point) (offset buffer)
+  (let ((iter (iter-at-mark buffer)))
+    (setf (text-iter-offset iter) offset)
+    (update-cursor buffer iter)))
+
 (defun start-iter (buffer)
   (text-buffer-get-start-iter buffer))
 
@@ -155,6 +163,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; command
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-command point ()
+  (point *buffer*))
+
+(define-command (setf point) (offset)
+  (setf (point *buffer*) offset))
+
+(define-command-alias (setf point) goto-char)
 
 (define-command backward-char (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))

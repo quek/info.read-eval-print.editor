@@ -4,11 +4,17 @@
 (define-symbol-macro *digit-argument*
     (or (digit-argument-of *buffer*) 1))
 
+(defun command-intern (x)
+  (typecase x
+    (string (intern x :info.read-eval-print.editor.command))
+    (symbol (command-intern (symbol-name x)))
+    (cons (list 'setf (command-intern (cadr x))))))
+
 (defmacro define-command (&whole form name &body body)
   (multiple-value-bind (layer-arg layer qualifiers args method-body)
       (contextl::parse-method-body form body)
     (declare (ignore layer-arg layer qualifiers method-body))
-    (let ((name (intern (symbol-name name) :info.read-eval-print.editor.command)))
+    (let ((name (command-intern name)))
       `(progn
          (define-layered-function ,name ,(let ((x (scan args)))
                                            (collect (if (consp x)
@@ -17,11 +23,10 @@
          (define-layered-method ,name ,@body)))))
 
 (defmacro define-command-alias (command &rest aliases)
-  (let ((command (intern (symbol-name command) :info.read-eval-print.editor.command)))
+  (let ((command (command-intern command)))
     `(progn
        ,@(let ((x (scan aliases)))
-           (collect `(setf (fdefinition ',(intern (symbol-name x)
-                                                  :info.read-eval-print.editor.command))
+           (collect `(setf (fdefinition ',(command-intern x))
                            (fdefinition ',command)))))))
 
 
