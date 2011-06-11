@@ -11,5 +11,6 @@
                (:file "command")
                (:file "buffer")
                (:file "mode")
-               (:file "gui"))
+               (:file "gui")
+               (:file "common-lisp"))
   :depends-on (:cl-gtk2-gtk :cl-ppcre :hu.dwim.defclass-star :jp :swank :closer-mop :contextl :quek))

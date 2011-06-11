@@ -170,6 +170,9 @@
 (define-command (setf point) (offset)
   (setf (point *buffer*) offset))
 
+(define-command insert (text)
+  (insert *buffer* text))
+
 (define-command-alias (setf point) goto-char)
 
 (define-command backward-char (&optional (count *digit-argument*))

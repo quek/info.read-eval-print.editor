@@ -117,23 +117,31 @@
        (define-layered-method key-binding :in ,mode or (mode keyseq editor-mode)
                               (get-key ,key-map editor-mode keyseq)))))
 
-(define-mode fundamental-mode () ())
-
-(define-mode lisp-mode () ())
-
-(define-mode common-lisp-mode (lisp-mode) ())
-
-(pushnew '("\\.lisp$" . common-lisp-mode) *auto-mode-alist* :test #'equal)
-
-(define-mode show-paren-mode () ())
-
 (defmethod print-object ((x mode) stream)
   (print-unreadable-object (x stream)
     (format stream "~a ~(~{~a~^ ~}~)" (name-of x) (enabled-modes-of x))))
 
 
+(defun add-auto-mode-alist (mode &rest regexp)
+  (iterate ((x (scan regexp)))
+    (pushnew `(,x . ,mode) *auto-mode-alist* :test #'equal))
+  *auto-mode-alist*)
+
+(defun remove-auto-mode-alist (regexp)
+  (setf *auto-mode-alist*
+        (delete regexp *auto-mode-alist* :key #'car :test #'equal)))
 
 (defvar *digit-argument-map* (make-instance 'key-map))
+
+
+(define-mode fundamental-mode () ())
+
+(define-mode show-paren-mode () ())
+
+
+(define-command indent ()
+  (info.read-eval-print.editor.command::insert "indent"))
+
 
 (loop for (keyseq command)
       in `(((#\0) info.read-eval-print.editor.command::digit-argument-0)
@@ -170,7 +178,8 @@
            ((#\p) info.read-eval-print.editor.command::paste-below-cursor)
            ((#\g) ,(lambda () (push-temp-key-map *fundamental-mode-map* *g-key-map*)))
            ((#\y) ,(lambda () (push-temp-key-map *fundamental-mode-map* *y-key-map*)))
-           ((:control #\w) ,(lambda () (push-temp-key-map *fundamental-mode-map* *ctl-w-key-map*))))
+           ((:control #\w) ,(lambda () (push-temp-key-map *fundamental-mode-map* *ctl-w-key-map*)))
+           ((#\=) info.read-eval-print.editor.command::indent))
       do (set-key *fundamental-mode-map* :normal keyseq command))
 
 (loop for (keyseq command)
@@ -200,10 +209,3 @@
            ((#\k) ,(lambda () (window-k *editor*)))
            ((#\l) ,(lambda () (window-l *editor*))))
       do (set-key *ctl-w-key-map* :normal keyseq command))
-
-
-(loop for (mode keyseq command)
-      in `((:normal (:super #\e) info.read-eval-print.editor.command::eval-last-sexp)
-           (:insert (:super #\e) info.read-eval-print.editor.command::eval-last-sexp))
-      do (set-key *common-lisp-mode-map*  mode keyseq command))
-

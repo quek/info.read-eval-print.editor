@@ -15,12 +15,14 @@
   (multiple-value-bind (layer-arg layer qualifiers args method-body)
       (contextl::parse-method-body form body)
     (declare (ignore layer-arg layer qualifiers method-body))
-    (let ((name (command-intern name)))
+    (let* ((name (command-intern name))
+           (lf-p (not (ignore-errors (layered-function-definer name)))))
       `(progn
-         (define-layered-function ,name ,(let ((x (scan args)))
-                                           (collect (if (consp x)
-                                                        (car x)
-                                                        x))))
+         ,@(when lf-p
+             `((define-layered-function ,name ,(let ((x (scan args)))
+                                                 (collect (if (consp x)
+                                                              (car x)
+                                                              x))))))
          (define-layered-method ,name ,@body)))))
 
 (defmacro define-command-alias (command &rest aliases)
