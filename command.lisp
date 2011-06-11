@@ -4,11 +4,12 @@
 (define-symbol-macro *digit-argument*
     (or (digit-argument-of *buffer*) 1))
 
-(defun command-intern (x)
-  (typecase x
-    (string (intern x :info.read-eval-print.editor.command))
-    (symbol (command-intern (symbol-name x)))
-    (cons (list 'setf (command-intern (cadr x))))))
+(eval-always
+  (defun command-intern (x)
+    (typecase x
+      (string (intern x :info.read-eval-print.editor.command))
+      (symbol (command-intern (symbol-name x)))
+      (cons (list 'setf (command-intern (cadr x)))))))
 
 (defmacro define-command (&whole form name &body body)
   (multiple-value-bind (layer-arg layer qualifiers args method-body)
