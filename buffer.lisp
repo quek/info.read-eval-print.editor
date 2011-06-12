@@ -127,6 +127,11 @@
 (define-command insert (text)
   (insert *buffer* text))
 
+(define-command insert* (text pos)
+  (let ((iter (iter-at-mark *buffer*)))
+    (setf (text-iter-offset iter) pos)
+    (insert *buffer* text :position iter)))
+
 (define-command-alias (setf point) goto-char)
 
 (define-command backward-char (&optional (count *digit-argument*))
@@ -243,7 +248,7 @@
       (subseq (text-of *buffer*) start end)))
 
 (define-command char-after (&optional (pos (info.read-eval-print.editor.command::point)))
-  (char (text-of *buffer*) pos))
+  (ignore-errors (char (text-of *buffer*) pos)))
 
 (define-command skip-chars-forward (regexp &optional end)
   (let ((text (text-of *buffer*))
@@ -260,3 +265,12 @@
 (define-command forward-word (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))
     (text-iter-move iter :by :word :count count)))
+
+(define-command delete-indentation ()
+  (let ((iter (iter-at-mark *buffer*))
+        (end (iter-at-mark *buffer*)))
+    (setf (text-iter-line-offset iter) 0)
+    (loop while (find (text-iter-char iter) #(#\Space #\Tab))
+          do (setf (text-iter-offset end)
+                   (1+ (text-iter-offset iter)))
+             (text-buffer-delete *buffer* iter end))))

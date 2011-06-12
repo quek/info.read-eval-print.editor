@@ -6,8 +6,8 @@
 
 
 (define-command indent :in common-lisp-mode ()
-  (funcall (read-from-string "INFO.READ-EVAL-PRINT.EDITOR.CL-INDENT:INDENT-LINE")
-           (info.read-eval-print.editor.command::point) nil))
+  (funcall (read-from-string "INFO.READ-EVAL-PRINT.EDITOR.COMMON-LISP.INDENT:INDENT-LINE")
+           (info.read-eval-print.editor.command::point)))
 
 
 (defun forward-sexp (iter &optional (count 1))

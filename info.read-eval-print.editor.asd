@@ -13,5 +13,7 @@
                (:file "mode")
                (:file "gui")
                (:file "common-lisp")
-               (:file "cl-indent"))
+               ;;(:file "cl-indent")
+               (:file "common-lisp-indent")
+               )
   :depends-on (:cl-gtk2-gtk :cl-ppcre :hu.dwim.defclass-star :jp :swank :closer-mop :contextl :quek))
