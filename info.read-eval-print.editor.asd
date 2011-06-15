@@ -8,6 +8,7 @@
                (:file "special-variable")
                (:file "class")
                (:file "config")
+               (:file "font")
                (:file "command")
                (:file "buffer")
                (:file "mode")

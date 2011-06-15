@@ -48,6 +48,8 @@
         (status-view (make-instance 'source-view
                                     :buffer (make-instance 'buffer)
                                     :wrap-mode :char)))
+    (iterate ((x (scan (list view status-view))))
+      (gtk::widget-modify-font x (pango::pango-font-description-from-string *defualt-font*)))
     (let-ui (frame
              :var f
              :view view

@@ -140,7 +140,7 @@
                (files (directory (str path "*"))))
           (if (len=1 files)
               (setf (text-of *buffer*)
-                    (format nil "~{~a~^ ~}" `(":" ,@butlast ,(car files))))
+                    (format nil ":~{~a~^ ~}" `(,@butlast ,(car files))))
               (progn
                 (open-info-frame (with-output-to-string (out)
                                    (iterate ((file (scan files)))
