@@ -3,7 +3,12 @@
 
 (defmethod initialize-instance :after ((buffer buffer) &rest initargs)
   (declare (ignore initargs))
-  (setf (style-scheme buffer) *default-buffer-style-scheme*))
+  (setf (style-scheme buffer) *default-buffer-style-scheme*)
+  (setf (source-buffer-language buffer)
+        (gtk-source-language-manager-guess-language
+         (gtk-source-language-manager-get-default)
+         "a.lisp"
+         (cffi-sys:null-pointer))))
 
 (defmethod update-cursor ((buffer buffer) iter)
   (text-buffer-place-cursor buffer iter)

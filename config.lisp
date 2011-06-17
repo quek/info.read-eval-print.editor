@@ -1,6 +1,6 @@
 (in-package :info.read-eval-print.editor)
 
-(defparameter *defualt-font* "Monospace 10")
+(defparameter *defualt-font* "Monospace 10.5")
 
 (defparameter *default-buffer-style-scheme* "oblivion")
 (defparameter *default-status-style-scheme* "classic")

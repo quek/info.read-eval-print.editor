@@ -387,5 +387,7 @@
         (connect-signal command-view "key-press-event" 'command-text-view-key-press-event-cb)
         (connect-signal command-view "key-release-event" 'command-text-view-key-release-event-cb)
 
+        (gtk::widget-modify-font command-view (pango::pango-font-description-from-string *defualt-font*))
+
         (widget-show window)
         (widget-hide info-frame)))))

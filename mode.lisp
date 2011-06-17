@@ -67,7 +67,7 @@
 
 (define-layered-class mode ()
   ((enabled-modes :initarg :enabled-modes
-                  :initform `(fundamental-mode)
+                  :initform `(common-lisp-mode fundamental-mode)
                   :accessor enabled-modes-of)))
 
 (defun mode-layer-context (mode)
@@ -141,6 +141,10 @@
 
 (define-command indent ()
   (info.read-eval-print.editor.command::insert "indent"))
+
+(define-command newline-and-indent ()
+  (insert *buffer* (format nil "~%"))
+  (info.read-eval-print.editor.command:indent))
 
 
 (loop for (keyseq command)

@@ -33,7 +33,7 @@
     (let ((left-paren (or (find-left-paren point)
                           0)))
       (setf (point) left-paren)
-      (current-column))))
+      (1+ (current-column)))))
 
 (defun indent-line (&optional (point (point)))
   (let ((beginning-of-line (save-excursion (beginning-of-line) (point)))
