@@ -115,5 +115,5 @@
            (:insert (:control #\i) info.read-eval-print.editor.command::indent)
            (:insert (#\Tab) info.read-eval-print.editor.command::indent)
            (:insert (:control #\m) info.read-eval-print.editor.command::newline-and-indent)
-           (:insert (#\Newline) info.read-eval-print.editor.command::newline-and-indent))
+           (:insert (#\Return) info.read-eval-print.editor.command::newline-and-indent))
       do (set-key *common-lisp-mode-map*  mode keyseq command))

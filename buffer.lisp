@@ -249,8 +249,13 @@
 
 (define-command buffer-substring-no-properties (start end)
   (when (< end start)
-      (rotatef start end)
-      (subseq (text-of *buffer*) start end)))
+    (rotatef start end))
+  (let ((a (iter-at-mark *buffer*))
+        (b (iter-at-mark *buffer*)))
+    (setf (text-iter-offset a) start
+          (text-iter-offset b) end)
+    (text-buffer-slice *buffer* a b)))
+
 
 (define-command char-after (&optional (pos (info.read-eval-print.editor.command::point)))
   (ignore-errors (char (text-of *buffer*) pos)))

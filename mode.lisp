@@ -138,13 +138,12 @@
 
 (define-mode show-paren-mode () ())
 
-
 (define-command indent ()
   (info.read-eval-print.editor.command::insert "indent"))
 
 (define-command newline-and-indent ()
   (insert *buffer* (format nil "~%"))
-  (info.read-eval-print.editor.command:indent))
+  (info.read-eval-print.editor.command::indent))
 
 
 (loop for (keyseq command)

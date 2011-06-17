@@ -389,5 +389,5 @@
 
         (gtk::widget-modify-font command-view (pango::pango-font-description-from-string *defualt-font*))
 
-        (widget-show window)
+        (Widget-show window)
         (widget-hide info-frame)))))

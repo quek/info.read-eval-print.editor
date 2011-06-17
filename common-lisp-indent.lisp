@@ -13,6 +13,18 @@
 
 (defvar *indent* (make-hash-table :test #'equal))
 
+(defun parse-sexp (point)
+  (let* ((left-paren (find-left-paren point))
+         (column (progn
+                   (setf (point) left-paren)
+                   (current-column))))
+    (forward-char)
+    (forward-sexp)
+    (p left-paren (point))
+    (let ((sexp (buffer-substring-no-properties (1+ left-paren) (point))))
+      (print sexp)
+      (values column sexp))))
+
 (defun find-left-paren (point)
   (let ((level 0))
     (collect-first
@@ -30,10 +42,9 @@
 
 (defun compute-line-indent (point)
   (save-excursion
-    (let ((left-paren (or (find-left-paren point)
-                          0)))
-      (setf (point) left-paren)
-      (1+ (current-column)))))
+    (multiple-value-bind (column sexp) (parse-sexp point)
+      (+ column (gethash sexp *indent* 1)))))
+
 
 (defun indent-line (&optional (point (point)))
   (let ((beginning-of-line (save-excursion (beginning-of-line) (point)))
@@ -41,3 +52,7 @@
     (delete-indentation)
     (insert* (make-string indent :initial-element #\Space)
              beginning-of-line)))
+
+
+
+(setf (gethash "let" *indent*) 2)
