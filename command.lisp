@@ -101,26 +101,6 @@
   (window-close *editor* (current-frame-of *editor*))
   (focus (current-frame-of *editor*)))
 
-#+nil
-(define-command command-mode-completion ()
-  (let* ((input (text-of *buffer*))
-         (pos (text-iter-offset (iter-at-mark *buffer*)))
-         (splited (ppcre:split "\\s" input :start 1 :limit 2))
-         (cmd (car splited))
-         (path (cadr splited)))
-    (let ((files (directory (str path "*"))))
-      (if (= 1 (length files))
-          (setf (text-of *buffer*) (str ":" cmd " " (car files)))
-          (progn
-            (open-info-frame)
-            (setf (text-of (buffer-of (info-frame-of *editor*)))
-                  (with-output-to-string (out)
-                    (iterate ((file (scan files)))
-                      (format out "~a~%" file))))
-            ;; (setf (text-of *buffer*) (str ":" cmd " " path " " files))
-            (let ((iter (iter-at-mark *buffer*)))
-              (setf (text-iter-offset iter) pos)
-              (update-cursor *buffer* iter)))))))
 
 (define-command simple-completion ()
   (let* ((input (text-of *buffer*))

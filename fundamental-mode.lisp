@@ -45,9 +45,10 @@
            ((#\u) info.read-eval-print.editor.command::undo)
            ((:control #\r) info.read-eval-print.editor.command::redo)
            ((#\p) info.read-eval-print.editor.command::paste-below-cursor)
-           ((#\g) ,(lambda () (push-temp-key-map *fundamental-mode-map* *g-key-map*)))
-           ((#\y) ,(lambda () (push-temp-key-map *fundamental-mode-map* *y-key-map*)))
-           ((:control #\w) ,(lambda () (push-temp-key-map *fundamental-mode-map* *ctl-w-key-map*)))
+           ((#\d) ,(^ push-temp-key-map *fundamental-mode-map* *d-key-map*))
+           ((#\g) ,(^ push-temp-key-map *fundamental-mode-map* *g-key-map*))
+           ((#\y) ,(^ push-temp-key-map *fundamental-mode-map* *y-key-map*))
+           ((:control #\w) ,(^ push-temp-key-map *fundamental-mode-map* *ctl-w-key-map*))
            ((#\=) info.read-eval-print.editor.command::indent))
       do (set-key *fundamental-mode-map* :normal keyseq command))
 
@@ -57,6 +58,11 @@
            ((#\Esc) info.read-eval-print.editor.command::normal-mode))
       do (set-key *fundamental-mode-map* :insert keyseq command))
 
+(defvar *d-key-map* (make-instance 'key-map :inherits (list *digit-argument-map*)))
+
+(loop for (keyseq command)
+      in `(((#\d) info.read-eval-print.editor.command::delete-line))
+      do (set-key *d-key-map* :normal keyseq command))
 
 (defvar *g-key-map* (make-instance 'key-map :inherits (list *digit-argument-map*)))
 

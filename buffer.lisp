@@ -237,8 +237,11 @@
 (define-command paste-below-cursor (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))
     (setf (text-iter-line-offset iter) 0)
+    (text-iter-move iter :by :line)
     (dotimes (i count)
-      (insert *buffer* (format nil "~a~%" (yank-of *buffer*)) :position iter))))
+      (insert *buffer* (format nil "~a~%" (yank-of *buffer*)) :position iter))
+    (text-iter-move iter :by :line :direction :backward)
+    (update-cursor *buffer* iter)))
 
 (define-command w ()
   (let ((*buffer* (current-buffer-of *editor*)))
@@ -325,3 +328,13 @@
       (let ((g (nth (1+ n) m)))
         (info.read-eval-print.editor.command::buffer-substring-no-properties
          (aref g 0) (aref g 1))))))
+
+(define-command delete-line ()
+  (let ((start (iter-at-mark *buffer*))
+        (end (iter-at-mark *buffer*)))
+    (setf (text-iter-line-offset start) 0)
+    (text-iter-forward-to-line-end end)
+    (text-iter-move end)
+    (setf (yank-of *buffer*)
+          (string-right-trim '(#\Newline #\Return) (text-buffer-slice *buffer* start end)))
+    (text-buffer-delete *buffer* start end)))
