@@ -280,7 +280,7 @@
     (text-buffer-slice *buffer* a b)))
 
 
-(define-command char-after (&optional (pos (info.read-eval-print.editor.command::point)))
+(define-command char-after (&optional (pos (point *buffer*)))
   (ignore-errors (char (text-of *buffer*) pos)))
 
 (define-command skip-chars-forward (regexp &optional end)

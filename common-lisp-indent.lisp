@@ -20,16 +20,15 @@
       (find-package :cl-user)))
 
 (defun parse-sexp (point)
-  (let* ((left-paren (find-left-paren point))
-         (column (progn
-                   (setf (point) left-paren)
-                   (current-column))))
-    (forward-char)
-    (forward-sexp)
-    (p left-paren (point))
-    (let ((sexp (buffer-substring-no-properties (1+ left-paren) (point))))
-      (print sexp)
-      (values column sexp))))
+  (awhen (find-left-paren point)
+    (let ((column (progn
+                    (setf (point) it)
+                    (current-column))))
+      (forward-char)
+      (forward-sexp)
+      (let ((sexp (buffer-substring-no-properties (1+ it) (point))))
+        (print sexp)
+        (values column sexp)))))
 
 (defun find-left-paren (point)
   (let ((level 0))
@@ -56,6 +55,8 @@
   (save-excursion
     (let ((package (current-package)))
       (multiple-value-bind (column sexp) (parse-sexp point)
+        (unless column
+          (return-from compute-line-indent 0))
         (let ((v (gethash sexp *indent*)))
           (if v
               (+ column v)
