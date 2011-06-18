@@ -1,3 +1,49 @@
+* 基本的なコマンド
+
+h j k l
+w W b B
+e E
+( )
+{ }
+0 $
+^
++ -
+n|              n 桁目
+H
+M
+L
+/ ? n N
+f F t T ; ,
+nG G :n
+mx `x `` 'x ''
+i a I A o O
+r
+cw
+cc
+cmotion
+R
+s
+S
+x
+X
+dw
+dd
+dmotion
+D
+yw
+yy
+"ayy
+ymotion
+p P
+"aP
+.
+u U
+J
+
+* motion
+
+いまの作りで実装可能？
+
 * キーマップの実装方法
   d3w
   ci"
