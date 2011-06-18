@@ -23,7 +23,7 @@
            ((#\7) info.read-eval-print.editor.command::digit-argument-7)
            ((#\8) info.read-eval-print.editor.command::digit-argument-8)
            ((#\9) info.read-eval-print.editor.command::digit-argument-9))
-      do (set-key *fundamental-mode-map* :normal keyseq command nil))
+      do (set-key *digit-argument-map* :normal keyseq command nil))
 
 (pushnew *digit-argument-map* (inherits-of *fundamental-mode-map*))
 
@@ -61,7 +61,8 @@
 (defvar *d-key-map* (make-instance 'key-map :inherits (list *digit-argument-map*)))
 
 (loop for (keyseq command)
-      in `(((#\d) info.read-eval-print.editor.command::delete-line))
+      in `(((#\d) info.read-eval-print.editor.command::delete-line)
+           ((#\w) info.read-eval-print.editor.command::delete-word))
       do (set-key *d-key-map* :normal keyseq command))
 
 (defvar *g-key-map* (make-instance 'key-map :inherits (list *digit-argument-map*)))

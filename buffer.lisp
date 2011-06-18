@@ -338,3 +338,11 @@
     (setf (yank-of *buffer*)
           (string-right-trim '(#\Newline #\Return) (text-buffer-slice *buffer* start end)))
     (text-buffer-delete *buffer* start end)))
+
+(define-command delete-word (&optional (count *digit-argument*))
+  (let ((start (iter-at-mark *buffer*))
+        (end (iter-at-mark *buffer*)))
+    (text-iter-move end :count count :by :word)
+    (setf (yank-of *buffer*)
+          (text-buffer-slice *buffer* start end))
+    (text-buffer-delete *buffer* start end)))

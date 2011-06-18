@@ -15,10 +15,11 @@
   (multiple-value-bind (layer-arg layer qualifiers args method-body)
       (contextl::parse-method-body form body)
     (declare (ignore layer-arg layer qualifiers method-body))
-    (let* ((name (command-intern name))
-           (lf-p (not (ignore-errors (layered-function-definer name)))))
+    (let* ((name (command-intern name)))
       `(progn
-         ,@(when lf-p
+         ,@(if (fboundp name)
+               (progn (layered-function-definer name)
+                      nil)
              `((export ',name :info.read-eval-print.editor.command)
                (define-layered-function ,name ,(let ((x (scan args)))
                                                  (collect (if (consp x)
