@@ -88,7 +88,6 @@
       do (set-key *ctl-w-key-map* :normal keyseq command))
 
 (defvar *register-key-map* (make-instance 'key-map))
-(defvar *register* #\")
 
 (iterate ((c (scan-char-range #\a #\z))
           (cc (scan-char-range #\A #\Z)))

@@ -1,9 +1,15 @@
 (in-package :info.read-eval-print.editor)
 
-(defmethod register-value (register &optional (char #\"))
+(defvar *register* #\")
+
+(defun current-regisetr ()
+  (prog1 *register*
+    (setf *register* #\")))
+
+(defmethod register-value (register &optional (char (current-regisetr)))
   (gethash char (places-of register)))
 
-(defmethod (setf register-value) (value register &optional (char #\"))
+(defmethod (setf register-value) (value register &optional (char (current-regisetr)))
   (setf (gethash char (places-of register)) value))
 
 (defmethod register-push (register value)

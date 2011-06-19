@@ -46,7 +46,11 @@
               (progn (when (cdr it)
                        (pop-temp-key-map key-map))
                      (car it))
-              (get-key-from-inherits temp-key-map editor-mode keyseq)))
+              (aif (get-key-from-inherits temp-key-map editor-mode keyseq)
+                   it
+                   (progn
+                     (pop-temp-key-map key-map)
+                     nil))))
        (aif (gethash keyseq (key-map-table key-map editor-mode))
             (car it)
             (get-key-from-inherits key-map editor-mode keyseq))))

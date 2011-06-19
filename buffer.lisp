@@ -238,7 +238,8 @@
 (define-command paste-below-cursor (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))
     (setf (text-iter-line-offset iter) 0)
-    (text-iter-move iter :by :line)
+    (unless (text-iter-move iter :by :line)
+      (insert *buffer* (string #\Newline) :position iter))
     (dotimes (i count)
       (insert *buffer*
               (format nil "~a~%" (register-value (register-of *editor*)))
