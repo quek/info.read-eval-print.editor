@@ -123,23 +123,23 @@
 (defun scan-char-forward ()
   (declare (optimizable-series-function))
   (producing (z) ((iter (iter-at-mark *buffer*)) c)
-             (loop
-               (tagbody
-                  (if (text-iter-is-end iter)
-                      (terminate-producing))
-                  (setq c (text-iter-char iter))
-                  (text-iter-move iter)
-                  (next-out z c)))))
+    (loop
+      (tagbody
+         (if (text-iter-is-end iter)
+             (terminate-producing))
+         (setq c (text-iter-char iter))
+         (text-iter-move iter)
+         (next-out z c)))))
 
 (defun scan-char-backward ()
   (declare (optimizable-series-function))
   (producing (z) ((iter (iter-at-mark *buffer*)) (finish nil) c)
-             (loop
-               (tagbody
-                  (if (text-iter-is-start iter)
-                      (terminate-producing))
-                  (text-iter-move iter :direction :backward)
-                  (next-out z (text-iter-char iter))))))
+    (loop
+      (tagbody
+         (if (text-iter-is-start iter)
+             (terminate-producing))
+         (text-iter-move iter :direction :backward)
+         (next-out z (text-iter-char iter))))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
