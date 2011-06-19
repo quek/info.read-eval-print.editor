@@ -10,6 +10,7 @@
                (:file "config")
                (:file "font")
                (:file "command")
+               (:file "register")
                (:file "buffer")
                (:file "mode")
                (:file "gui")

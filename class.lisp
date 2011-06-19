@@ -12,7 +12,8 @@
    (command-view)
    (dispatch-tables `((:command . ,*command-dispatch-table*)))
    (command-key-bindings)
-   (mode :normal :type (member :normal :insert :command))))
+   (mode :normal :type (member :normal :insert :command))
+   (register (make-instance 'register))))
 
 (defclass* frame (v-box)
   ((view :reader t)
@@ -23,8 +24,10 @@
   ((frame)
    (name nil)
    (file nil)
-   (yank "")
    (digit-argument nil :accessor nil)
    (external-format :utf-8)
    (mode (make-instance 'mode)))
   (:metaclass gobject-class))
+
+(defclass* register ()
+  ((places (make-hash-table :test #'eql))))

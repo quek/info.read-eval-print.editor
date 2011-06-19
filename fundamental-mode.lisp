@@ -49,6 +49,7 @@
            ((#\g) ,(^ push-temp-key-map *fundamental-mode-map* *g-key-map*))
            ((#\y) ,(^ push-temp-key-map *fundamental-mode-map* *y-key-map*))
            ((:control #\w) ,(^ push-temp-key-map *fundamental-mode-map* *ctl-w-key-map*))
+           ((#\") ,(^ push-temp-key-map *fundamental-mode-map* *register-key-map*))
            ((#\=) info.read-eval-print.editor.command::indent))
       do (set-key *fundamental-mode-map* :normal keyseq command))
 
@@ -85,3 +86,11 @@
            ((#\k) ,(lambda () (window-k *editor*)))
            ((#\l) ,(lambda () (window-l *editor*))))
       do (set-key *ctl-w-key-map* :normal keyseq command))
+
+(defvar *register-key-map* (make-instance 'key-map))
+(defvar *register* #\")
+
+(iterate ((c (scan-char-range #\a #\z))
+          (cc (scan-char-range #\A #\Z)))
+  (set-key *register-key-map* :normal (list c) (^ setf *register* c))
+  (set-key *register-key-map* :normal (list cc) (^ setf *register* cc)))
