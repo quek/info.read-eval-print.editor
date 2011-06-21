@@ -10,7 +10,11 @@
   (gethash char (places-of register)))
 
 (defmethod (setf register-value) (value register &optional (char (current-regisetr)))
-  (setf (gethash char (places-of register)) value))
+  (if (upper-case-p char)
+      (let ((char (char-downcase char)))
+       (setf (gethash char (places-of register))
+             (str (gethash char (places-of register)) value)))
+      (setf (gethash char (places-of register)) value)))
 
 (defmethod register-push (register value)
   (with-slots (place) register
