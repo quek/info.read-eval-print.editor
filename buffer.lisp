@@ -207,11 +207,22 @@
     (setf (text-iter-line-offset iter) 0)
     (update-cursor *buffer* iter)))
 
+(define-command beginning-of-line-or-digit-0 ()
+  (with-slots (digit-argument) *buffer*
+    (if digit-argument
+        (setf (digit-argument-of *buffer*) 0)
+        (info.read-eval-print.editor.command::beginning-of-line))))
+
 (define-command end-of-line ()
   (let ((iter (iter-at-mark *buffer*)))
     (text-iter-forward-to-line-end iter)
     (update-cursor *buffer* iter)))
 
+(define-command back-to-indentation ()
+  (let ((iter (iter-at-mark *buffer*)))
+    (setf (text-iter-line-offset iter) 0)
+    (forward-skip-whitespace iter)
+    (update-cursor *buffer* iter)))
 
 (define-command delete-char (&optional (count *digit-argument*))
   (let ((start (iter-at-mark *buffer*))

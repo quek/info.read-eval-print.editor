@@ -39,6 +39,8 @@
            ((#\w) info.read-eval-print.editor.command::forward-sexp)
            ((#\b) info.read-eval-print.editor.command::backward-sexp)
            ((#\G) info.read-eval-print.editor.command::end-of-buffer)
+           ((#\0) info.read-eval-print.editor.command::beginning-of-line-or-digit-0)
+           ((#\^) info.read-eval-print.editor.command::back-to-indentation)
            ((#\$) info.read-eval-print.editor.command::end-of-line)
            ((#\x) info.read-eval-print.editor.command::delete-char)
            ((#\X) info.read-eval-print.editor.command::backward-delete-char)
