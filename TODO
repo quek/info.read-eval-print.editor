@@ -1,7 +1,7 @@
 * 基本的なコマンド
 
-h j k l
-w W b B
+        h j k l
+        w W b B
 e E
 ( )
 { }

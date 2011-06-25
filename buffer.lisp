@@ -221,7 +221,8 @@
 (define-command back-to-indentation ()
   (let ((iter (iter-at-mark *buffer*)))
     (setf (text-iter-line-offset iter) 0)
-    (forward-skip-whitespace iter)
+    (loop while (member (text-iter-char iter) '(#\Space #\Tab) :test #'char=)
+          do (text-iter-move iter))
     (update-cursor *buffer* iter)))
 
 (define-command delete-char (&optional (count *digit-argument*))
@@ -279,15 +280,6 @@
 (define-command current-column ()
   (text-iter-line-offset (iter-at-mark *buffer*)))
 
-(define-command back-to-indentation ()
-  (let ((iter (iter-at-mark *buffer*)))
-    (setf (text-iter-line-offset iter) 0)
-    (awhen (ppcre:scan (ppcre:create-scanner "\\S|$" :multi-line-mode t)
-                       (text-of *buffer*)
-                       :start (text-iter-offset iter))
-      (setf (text-iter-line-offset iter) it)
-      (update-cursor *buffer* iter))))
-
 (define-command buffer-substring-no-properties (start end)
   (when (< end start)
     (rotatef start end))
@@ -297,9 +289,14 @@
           (text-iter-offset b) end)
     (text-buffer-slice *buffer* a b)))
 
-
-(define-command char-after (&optional (pos (point *buffer*)))
-  (ignore-errors (char (text-of *buffer*) pos)))
+(define-command char-after (&optional pos)
+  (let ((iter (iter-at-mark *buffer*)))
+    (when pos
+      (setf (text-iter-offset iter) pos))
+    (let ((c (text-iter-char iter)))
+      (if (char= c #\Nul)
+          nil
+          c))))
 
 (define-command skip-chars-forward (regexp &optional end)
   (let ((text (text-of *buffer*))
@@ -313,9 +310,63 @@
 (define-command eolp ()
   (text-iter-ends-line (iter-at-mark *buffer*)))
 
+(define-command same-category-char (a b)
+  (cond ((whitespace-p a)
+         (whitespace-p b))
+        (t
+         (equal (cl-unicode:script a)
+                (cl-unicode:script b)))))
+
 (define-command forward-word (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))
-    (text-iter-move iter :by :word :count count)))
+    (forward-skip-whitespace iter)
+    (loop repeat count do
+      (loop until (text-iter-is-end iter)
+            with first-charh = (text-iter-char iter)
+            do (text-iter-move iter)
+            while (info.read-eval-print.editor.command:same-category-char
+                   first-charh (text-iter-char iter)))
+      (forward-skip-whitespace iter))
+    (update-cursor *buffer* iter)))
+
+(define-command forward-word* (&optional (count *digit-argument*))
+  (let ((iter (iter-at-mark *buffer*)))
+    (forward-skip-whitespace iter)
+    (dotimes (i count)
+      (loop until (text-iter-is-end iter)
+            do (text-iter-move iter)
+            until (whitespace-p (text-iter-char iter)))
+      (forward-skip-whitespace iter))
+    (update-cursor *buffer* iter)))
+
+(define-command backward-word (&optional (count *digit-argument*))
+  (let ((iter (iter-at-mark *buffer*)))
+    (loop repeat count do
+      (text-iter-move iter :direction :backward)
+      (backward-skip-whitespace iter)
+      (loop until (text-iter-is-start iter)
+            with first-charh = (text-iter-char iter)
+            do (text-iter-move iter :direction :backward)
+            while (or (info.read-eval-print.editor.command:same-category-char
+                       first-charh (text-iter-char iter))
+                      (progn
+                        (text-iter-move iter)
+                        nil))))
+    (update-cursor *buffer* iter)))
+
+(define-command backward-word* (&optional (count *digit-argument*))
+  (let ((iter (iter-at-mark *buffer*)))
+    (loop repeat count do
+      (text-iter-move iter :direction :backward)
+      (backward-skip-whitespace iter)
+      (loop until (text-iter-is-start iter)
+            do (text-iter-move iter :direction :backward)
+            until (and (whitespace-p (text-iter-char iter))
+                       (progn
+                         (text-iter-move iter)
+                         t))))
+    (update-cursor *buffer* iter)))
+
 
 (define-command delete-indentation ()
   (let ((iter (iter-at-mark *buffer*))

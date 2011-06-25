@@ -20,7 +20,7 @@
          ,@(if (fboundp name)
                (progn (layered-function-definer name)
                       nil)
-               `((export ',name :info.read-eval-print.editor.command)
+               `((eval-always (export ',name :info.read-eval-print.editor.command))
                  (define-layered-function ,name ,(let ((x (scan args)))
                                                    (collect (if (consp x)
                                                                 (car x)

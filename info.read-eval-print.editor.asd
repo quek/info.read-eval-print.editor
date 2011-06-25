@@ -19,4 +19,11 @@
                ;;(:file "cl-indent")
                (:file "common-lisp-indent")
                )
-  :depends-on (:cl-gtk2-gtk :cl-ppcre :hu.dwim.defclass-star :jp :swank :closer-mop :contextl :quek))
+  :depends-on (:cl-gtk2-gtk
+               :cl-ppcre
+               :cl-unicode
+               :hu.dwim.defclass-star
+               :jp
+               :swank
+               :closer-mop
+               :contextl :quek))
