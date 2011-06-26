@@ -15,9 +15,8 @@
     (let ((column (progn
                     (setf (point) it)
                     (current-column))))
-      (forward-char)
-      (forward-sexp)
-      (let ((sexp (buffer-substring-no-properties (1+ it) (point))))
+      (end-of-sexp)
+      (let ((sexp (buffer-substring-no-properties (1+ it) (1+ (point)))))
         (print sexp)
         (values column sexp)))))
 
@@ -36,7 +35,7 @@
                         (t nil)))
                 (scan-range :from (1- point) :downto 0 :by -1)))))
 
-(defun find-symbol\' (name package)
+(defun find-symbol* (name package)
   (let ((name (string-upcase name)))
     (or (ppcre:register-groups-bind (p n) ("(.*?)::?(.*)" name)
           (find-symbol n (find-package p)))
@@ -53,14 +52,17 @@
               (+ column v)
               (if (alexandria:starts-with #\( sexp)
                   (+ column 1)
-                  (let ((sym (find-symbol\' sexp package)))
+                  (let ((sym (find-symbol* sexp package)))
                     (if (macro-function sym)
                         (+ column 2)
                         (+ column (+ 2 (length sexp))))))))))))
 
 (defun indent-line (&optional (point (point)))
-  (let ((beginning-of-line (save-excursion (beginning-of-line) (point)))
-        (indent (compute-line-indent point)))
+  (let* ((beginning-of-line (save-excursion
+                              (setf (point) point)
+                              (beginning-of-line)
+                              (point)))
+         (indent (compute-line-indent beginning-of-line)))
     (delete-indentation)
     (insert* (make-string indent :initial-element #\Space)
              beginning-of-line)))
@@ -68,3 +70,4 @@
 
 
 (setf (gethash "let" *indent*) 2)
+(setf (gethash "defun" *indent*) 2)

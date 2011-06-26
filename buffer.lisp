@@ -395,6 +395,15 @@
                          t))))
     (update-cursor *buffer* iter)))
 
+(define-command forward-skip-whitespace ()
+  (let ((iter (iter-at-mark *buffer*)))
+    (forward-skip-whitespace iter)
+    (update-cursor *buffer* iter)))
+
+(define-command backward-skip-whitespace ()
+  (let ((iter (iter-at-mark *buffer*)))
+    (backward-skip-whitespace iter)
+    (update-cursor *buffer* iter)))
 
 (define-command delete-indentation ()
   (let ((iter (iter-at-mark *buffer*))

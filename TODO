@@ -40,6 +40,8 @@ p P
 u U
 J
 
+* self insert comand はやっぱり必要そう。
+
 * motion
 
 いまの作りで実装可能？

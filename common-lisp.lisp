@@ -25,9 +25,32 @@
                           do (decf level)))
             ((char= #\) char)
              (text-iter-move iter))
-            (t (loop until (whitespace-p (text-iter-char iter))
+            (t (loop until (or (text-iter-is-end iter)
+                               (whitespace-p (text-iter-char iter)))
                      do (text-iter-move iter)))))
     (forward-skip-whitespace iter)))
+
+(defun end-of-sexp (iter &optional (count 1))
+  (dotimes (i count)
+    (text-iter-move iter)
+    (forward-skip-whitespace iter)
+    (let ((char (text-iter-char iter)))
+      (cond ((char= #\( char)
+             (loop with level = 1
+                   for i = (text-iter-move iter)
+                   for c = (text-iter-char iter)
+                   until (or (zerop level) (text-iter-is-end iter))
+                   if (char= #\( c)
+                     do (incf level)
+                   else if (char= #\) c)
+                          do (decf level)))
+            ((char= #\) char))
+            (t (loop until (text-iter-is-end iter)
+                     until (and (whitespace-p (text-iter-char iter))
+                                (progn
+                                  (text-iter-move iter :direction :backward)
+                                  t))
+                     do (text-iter-move iter)))))))
 
 (defun backward-sexp (iter &optional (count 1))
   (dotimes (i count)
@@ -87,6 +110,11 @@
     (backward-sexp iter count)
     (update-cursor *buffer* iter)))
 
+(define-command end-of-sexp (&optional (count *digit-argument*))
+  (let ((iter (iter-at-mark *buffer*)))
+    (end-of-sexp iter count)
+    (update-cursor *buffer* iter)))
+
 (define-command up-list (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))
     (loop repeat count do (up-list iter))
@@ -136,6 +164,31 @@
                                  defun-form
                                  e))))))
 
+(defun symbol-at-point ()
+  (save-excursion
+    (let ((start (iter-at-mark *buffer*))
+          (end (iter-at-mark *buffer*)))
+      (backward-sexp start)
+      (text-buffer-slice *buffer* start end))))
+
+(define-command complete-symbol ()
+  (let* ((symbol (symbol-at-point))
+         (symbols (car (swank:simple-completions symbol (search-buffer-package)))))
+    (if (len=1 symbols)
+        (progn
+          (let ((end (iter-at-mark *buffer*))
+                (start (iter-at-mark *buffer*)))
+            (backward-sexp start)
+            (text-buffer-delete *buffer* start end)
+            (insert *buffer* (car symbols))))
+        (open-info-frame (with-output-to-string (out)
+                                 (iterate ((x (scan symbols)))
+                                   (format out "~a~%" x)))))))
+
+(define-command indent-and-complete-symbol ()
+  (info.read-eval-print.editor.command::indent)
+  (info.read-eval-print.editor.command::complete-symbol))
+
 (loop for (mode keyseq command)
       in `((:normal (:meta #\h) info.read-eval-print.editor.command::backward-sexp)
            (:insert (:meta #\h) info.read-eval-print.editor.command::backward-sexp)
@@ -149,7 +202,7 @@
            (:insert (:meta #\e) info.read-eval-print.editor.command::eval-last-sexp)
            (:normal (:meta #\x) info.read-eval-print.editor.command::eval-defun)
            (:insert (:meta #\x) info.read-eval-print.editor.command::eval-defun)
-           (:insert (:control #\i) info.read-eval-print.editor.command::indent)
+           (:insert (:control #\i) info.read-eval-print.editor.command::indent-and-complete-symbol)
            (:insert (#\Tab) info.read-eval-print.editor.command::indent)
            (:insert (:control #\m) info.read-eval-print.editor.command::newline-and-indent)
            (:insert (#\Return) info.read-eval-print.editor.command::newline-and-indent))
