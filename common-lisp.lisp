@@ -102,9 +102,10 @@
 
 (define-command beginning-of-defun ()
   (let ((iter (iter-at-mark *buffer*)))
-    (when (text-iter-search iter "defun" :direction :backward)
-      (text-iter-move iter :direction :backward)
-      (update-cursor *buffer* iter))))
+    (multiple-value-bind (p s e) (text-iter-search iter "(defun" :direction :backward)
+      (declare (ignore e))
+      (when p
+        (update-cursor *buffer* s)))))
 
 (defun search-buffer-package ()
   (let ((re "^\\((cl:\\|common-lisp:)?in-package\\b[ \\t']*([^\\)]+)[ \\t]*\\)"))
@@ -122,6 +123,7 @@
     (let ((start (info.read-eval-print.editor.command::point)))
       (info.read-eval-print.editor.command::forward-sexp)
       (let ((end (info.read-eval-print.editor.command::point)))
+        (quek:p start end)
         (info.read-eval-print.editor.command:buffer-substring-no-properties start end)))))
 
 (define-command eval-defun ()
