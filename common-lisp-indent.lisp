@@ -9,15 +9,6 @@
 
 (defvar *indent* (make-hash-table :test #'equal))
 
-(defun search-buffer-package ()
-  (let ((re "^\\((cl:\\|common-lisp:)?in-package\\b[ \\t']*([^\\)]+)[ \\t]*\\)"))
-    (when (or (re-search-backward re)
-              (re-search-forward re))
-      (match-string-no-properties 2))))
-
-(defun current-package ()
-  (or (ignore-errors (find-package (string-upcase (search-buffer-package))))
-      (find-package :cl-user)))
 
 (defun parse-sexp (point)
   (awhen (find-left-paren point)

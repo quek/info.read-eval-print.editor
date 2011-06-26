@@ -128,8 +128,12 @@
                         (event-key-state event-key))
         if (eq :control-mask x)
           collect :control
+        else if (eq :mod1-mask x)
+               collect :meta
         else if (eq :super-mask x)
                collect :super
+        else if (eq :hyper-mask x)
+               collect :hyper
         else if (numberp x)
                collect (cond ((= #.(gdk:keyval-from-name "Return") x)
                               #\Return)
@@ -333,6 +337,9 @@
   (with-slots (info-frame) *editor*
     (widget-hide info-frame)))
 
+(defun message (message)
+  (setf (text-buffer-text (text-view-buffer (command-view-of *editor*)))
+        (princ-to-string message)))
 
 (defvar *command-dispatch-table* (make-instance 'dispatch-table))
 ;; command

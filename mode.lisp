@@ -62,7 +62,7 @@
 (defmethod set-key :around (key-map editor-mode keyseq command &optional (restore-temp-key-map t))
   (loop for x in keyseq
         if (and (keywordp x)
-                (not (member x '(:control :alt :shif :super :hyper))))
+                (not (member x '(:control :meta :shif :super :hyper))))
           do (error "invalid keyseq ~a." keyseq))
   (call-next-method key-map editor-mode keyseq command restore-temp-key-map))
 
