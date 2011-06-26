@@ -322,10 +322,10 @@
     (forward-skip-whitespace iter)
     (loop repeat count do
       (loop until (text-iter-is-end iter)
-            with first-charh = (text-iter-char iter)
+            with first-char = (text-iter-char iter)
             do (text-iter-move iter)
             while (info.read-eval-print.editor.command:same-category-char
-                   first-charh (text-iter-char iter)))
+                   first-char (text-iter-char iter)))
       (forward-skip-whitespace iter))
     (update-cursor *buffer* iter)))
 
@@ -339,16 +339,44 @@
       (forward-skip-whitespace iter))
     (update-cursor *buffer* iter)))
 
+(define-command end-of-word (&optional (count *digit-argument*))
+  (let ((iter (iter-at-mark *buffer*)))
+    (loop repeat count do
+      (text-iter-move iter)
+      (forward-skip-whitespace iter)
+      (loop until (text-iter-is-end iter)
+            with first-char = (text-iter-char iter)
+            do (text-iter-move iter)
+            while (or (info.read-eval-print.editor.command:same-category-char
+                       first-char (text-iter-char iter))
+                      (progn
+                        (text-iter-move iter :direction :backward)
+                        nil))))
+    (update-cursor *buffer* iter)))
+
+(define-command end-of-word* (&optional (count *digit-argument*))
+  (let ((iter (iter-at-mark *buffer*)))
+    (loop repeat count do
+      (text-iter-move iter)
+      (forward-skip-whitespace iter)
+      (loop until (text-iter-is-end iter)
+            do (text-iter-move iter)
+            until (and (whitespace-p (text-iter-char iter))
+                       (progn
+                         (text-iter-move iter :direction :backward)
+                         t))))
+    (update-cursor *buffer* iter)))
+
 (define-command backward-word (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))
     (loop repeat count do
       (text-iter-move iter :direction :backward)
       (backward-skip-whitespace iter)
       (loop until (text-iter-is-start iter)
-            with first-charh = (text-iter-char iter)
+            with first-char = (text-iter-char iter)
             do (text-iter-move iter :direction :backward)
             while (or (info.read-eval-print.editor.command:same-category-char
-                       first-charh (text-iter-char iter))
+                       first-char (text-iter-char iter))
                       (progn
                         (text-iter-move iter)
                         nil))))

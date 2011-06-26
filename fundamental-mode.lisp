@@ -40,6 +40,8 @@
            ((#\W) info.read-eval-print.editor.command::forward-word*)
            ((#\b) info.read-eval-print.editor.command::backward-word)
            ((#\B) info.read-eval-print.editor.command::backward-word*)
+           ((#\e) info.read-eval-print.editor.command::end-of-word)
+           ((#\E) info.read-eval-print.editor.command::end-of-word*)
            ((#\G) info.read-eval-print.editor.command::end-of-buffer)
            ((#\0) info.read-eval-print.editor.command::beginning-of-line-or-digit-0)
            ((#\^) info.read-eval-print.editor.command::back-to-indentation)
