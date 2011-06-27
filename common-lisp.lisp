@@ -164,6 +164,12 @@
                                  defun-form
                                  e))))))
 
+(define-command compile-and-load-file ()
+  (open-info-frame
+   (with-output-to-string (*standard-output*)
+     (let ((*error-output* *standard-output*))
+       (load (compile-file (file-of *buffer*)))))))
+
 (defun symbol-at-point ()
   (save-excursion
     (let ((start (iter-at-mark *buffer*))
@@ -202,6 +208,7 @@
            (:insert (:meta #\e) info.read-eval-print.editor.command::eval-last-sexp)
            (:normal (:meta #\x) info.read-eval-print.editor.command::eval-defun)
            (:insert (:meta #\x) info.read-eval-print.editor.command::eval-defun)
+           (:normal (:meta #\k) info.read-eval-print.editor.command::compile-and-load-file)
            (:insert (:control #\i) info.read-eval-print.editor.command::indent-and-complete-symbol)
            (:insert (#\Tab) info.read-eval-print.editor.command::indent)
            (:insert (:control #\m) info.read-eval-print.editor.command::newline-and-indent)
