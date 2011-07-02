@@ -30,7 +30,7 @@
   (setf (text-buffer-text (text-view-buffer (status-view-of frame)))
         (or value "")))
 
- (defmethod update-status ((frame frame))
+(defmethod update-status ((frame frame))
   (setf (status-text frame)
         (format nil "~a  ~(~a ~{~a~^ ~}~)"
                 (name-of (buffer-of frame))
@@ -398,3 +398,8 @@
 
         (Widget-show window)
         (widget-hide info-frame)))))
+
+(defmacro with-editor (&body body)
+  `(let* ((*buffer* (current-buffer-of *editor*))
+          (*frame* (frame-of *buffer*)))
+     ,@body))

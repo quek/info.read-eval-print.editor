@@ -68,9 +68,11 @@
                    (cdr x)))
                (scan *auto-mode-alist*)))))
 
+(defmethod (setf file-of) :after (file (buffer buffer))
+  (setf (name-of buffer) (file-namestring file)))
+
 (defmethod find-file (buffer file)
   (setf (file-of buffer) file)
-  (setf (name-of buffer) (file-namestring file))
   (guess-language buffer)
   (awhen (auto-mode file)
     (enable-mode (mode-of buffer) it))
