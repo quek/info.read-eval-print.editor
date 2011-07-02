@@ -20,7 +20,7 @@
   (text-view-buffer (view-of frame)))
 
 (defmethod (setf buffer-of) (buffer (frame frame))
-  (setf (frame-of buffer) (view-of frame)
+  (setf (frame-of buffer) frame
         (text-view-buffer (view-of frame)) buffer))
 
 (defmethod status-text ((frame frame))
@@ -30,7 +30,7 @@
   (setf (text-buffer-text (text-view-buffer (status-view-of frame)))
         (or value "")))
 
-(defmethod update-status ((frame frame))
+ (defmethod update-status ((frame frame))
   (setf (status-text frame)
         (format nil "~a  ~(~a ~{~a~^ ~}~)"
                 (name-of (buffer-of frame))
@@ -189,7 +189,7 @@
                         nconc (f x))))))
     (f (top-frame-of editor))))
 
-(defmethod window-close ((editor editor) (frame frame))
+(defmethod editor-window-close ((editor editor) (frame frame))
   (when (closable-p editor)
     (let ((parent (widget-parent frame)))
       (container-remove parent frame)
@@ -218,17 +218,17 @@
                         thereis (f x))))))
     (f (top-frame-of editor))))
 
-(defmethod window-split ((editor editor) frame &optional (buffer (buffer-of frame)))
+(defmethod editor-window-split ((editor editor) frame &optional (buffer (buffer-of frame)))
   (let ((views (top-frame-of editor))
         (new-frame (make-frame :buffer buffer)))
-    (%window-split views frame new-frame 'v-box)))
+    (%editor-window-split views frame new-frame 'v-box)))
 
-(defmethod window-vsplit ((editor editor) frame &optional (buffer (buffer-of frame)))
+(defmethod editor-window-vsplit ((editor editor) frame &optional (buffer (buffer-of frame)))
   (let ((views (top-frame-of editor))
         (new-frame (make-frame :buffer buffer)))
-    (%window-split views frame new-frame 'h-box)))
+    (%editor-window-split views frame new-frame 'h-box)))
 
-(defgeneric %window-split (wiews frame new-frame box-class)
+(defgeneric %editor-window-split (wiews frame new-frame box-class)
   (:method ((views container) frame new-frame box-class)
     (labels ((f (fun other)
                (container-remove views frame)
@@ -248,7 +248,7 @@
                (f #'box-pack-end (car children)))
               (t
                (loop for x in children
-                     thereis (%window-split x frame new-frame box-class)))))))
+                     thereis (%editor-window-split x frame new-frame box-class)))))))
   (:method (views frame new-frame box-class)
     nil))
 
@@ -344,13 +344,13 @@
 (defvar *command-dispatch-table* (make-instance 'dispatch-table))
 ;; command
 (loop for (keyseq command)
-      in `(((:control #\c) info.read-eval-print.editor.command::normal-mode)
-           ((:control #\[) info.read-eval-print.editor.command::normal-mode)
-           ((#\Esc) info.read-eval-print.editor.command::normal-mode)
-           ((:control #\m) info.read-eval-print.editor.command::run-command)
-           ((#\Return) info.read-eval-print.editor.command::run-command)
-           ((:control #\i) info.read-eval-print.editor.command::simple-completion)
-           ((#\Tab) info.read-eval-print.editor.command::simple-completion))
+      in `(((:control #\c) normal-mode)
+           ((:control #\[) normal-mode)
+           ((#\Esc) normal-mode)
+           ((:control #\m) run-command)
+           ((#\Return) run-command)
+           ((:control #\i) simple-completion)
+           ((#\Tab) simple-completion))
       do (set-command *command-dispatch-table* keyseq command))
 
 

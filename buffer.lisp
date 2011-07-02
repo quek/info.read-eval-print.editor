@@ -32,7 +32,7 @@
 (defmethod slice ((buffer buffer) start end)
   (text-buffer-slice buffer start end))
 
-(defmethod insert ((buffer buffer) (text string) &key (position :cursor))
+(defmethod buffer-insert ((buffer buffer) (text string) &key (position :cursor))
   (text-buffer-insert buffer text :position position))
 
 (defun text-of (buffer)
@@ -45,10 +45,10 @@
   (text-buffer-get-iter-at-mark buffer
                                 (text-buffer-insertion-mark buffer)))
 
-(defun point (buffer)
+(defun buffer-point (buffer)
   (text-iter-offset (iter-at-mark buffer)))
 
-(defun (setf point) (offset buffer)
+(defun (setf buffer-point) (offset buffer)
   (let ((iter (iter-at-mark buffer)))
     (setf (text-iter-offset iter) offset)
     (update-cursor buffer iter)))
@@ -81,7 +81,7 @@
       (progn
         (setf (text-of buffer) "")))
   (let ((*buffer* buffer))
-    (info.read-eval-print.editor.command::beginning-of-buffer)))
+    (beginning-of-buffer)))
 
 (defmethod guess-language ((buffer buffer))
   (awhen (gtk-source-language-manager-guess-language
@@ -96,28 +96,31 @@
          (gtk-source-style-scheme-manager-get-default)
          style-scheme-id)))
 
-(defun save-buffer (buffer)
-  (with-open-file (out (file-of buffer)
-                       :direction :output
-                       :if-exists :supersede
-                       :external-format (external-format-of buffer))
-    (write-sequence (text-of buffer) out)))
+(defun save-buffer (buffer &optional (file (file-of buffer)))
+  (let ((file (or file (file-of buffer))))
+    (with-open-file (out file
+                         :direction :output
+                         :if-exists :supersede
+                         :external-format (external-format-of buffer))
+      (write-sequence (text-of buffer) out))
+    (setf (file-of buffer) file)
+    (update-status (frame-of buffer))))
 
-(defun forward-skip-whitespace (iter)
+(defun iter-forward-skip-whitespace (iter)
   (loop while (and (whitespace-p (text-iter-char iter))
                    (not (text-iter-is-end iter)))
         do (text-iter-move iter)))
 
-(defun backward-skip-whitespace (iter)
+(defun iter-backward-skip-whitespace (iter)
   (loop while (and (whitespace-p (text-iter-char iter))
                    (not (text-iter-is-start iter)))
         do (text-iter-move iter :direction :backward)))
 
 
 (defmacro save-excursion (&body body)
-  `(let ((pos (point *buffer*)))
+  `(let ((pos (buffer-point *buffer*)))
      (unwind-protect (progn ,@body)
-       (setf (point *buffer*) pos))))
+       (setf (buffer-point *buffer*) pos))))
 
 
 (defun scan-char-forward ()
@@ -147,18 +150,18 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-command point ()
-  (point *buffer*))
+  (buffer-point *buffer*))
 
 (define-command (setf point) (offset)
-  (setf (point *buffer*) offset))
+  (setf (buffer-point *buffer*) offset))
 
 (define-command insert (text)
-  (insert *buffer* text))
+  (buffer-insert *buffer* text))
 
 (define-command insert* (text pos)
   (let ((iter (iter-at-mark *buffer*)))
     (setf (text-iter-offset iter) pos)
-    (insert *buffer* text :position iter)))
+    (buffer-insert *buffer* text :position iter)))
 
 (define-command-alias (setf point) goto-char)
 
@@ -175,7 +178,6 @@
 (define-command next-line (&optional (count *digit-argument*))
   (let* ((iter (iter-at-mark *buffer*))
          (line-offset (text-iter-line-offset iter)))
-    ;; (loop repeat count do (text-view-forward-display-line (frame-of *buffer*) iter))
     (text-iter-move iter :count count :by :line)
     (setf (text-iter-line-offset iter) line-offset)
     (when (/= line-offset (text-iter-line-offset iter))
@@ -188,7 +190,6 @@
 (define-command previous-line (&optional (count *digit-argument*))
   (let* ((iter (iter-at-mark *buffer*))
          (line-offset (text-iter-line-offset iter)))
-    ;; (loop repeat count do (text-view-backward-display-line (frame-of *buffer*) iter))
     (text-iter-move iter :count count :by :line :direction :backward)
     (setf (text-iter-line-offset iter) line-offset)
     (update-cursor *buffer* iter)))
@@ -211,7 +212,7 @@
   (with-slots (digit-argument) *buffer*
     (if digit-argument
         (setf (digit-argument-of *buffer*) 0)
-        (info.read-eval-print.editor.command::beginning-of-line))))
+        (beginning-of-line))))
 
 (define-command end-of-line ()
   (let ((iter (iter-at-mark *buffer*)))
@@ -251,17 +252,17 @@
   (let ((iter (iter-at-mark *buffer*)))
     (setf (text-iter-line-offset iter) 0)
     (unless (text-iter-move iter :by :line)
-      (insert *buffer* (string #\Newline) :position iter))
+      (buffer-insert *buffer* (string #\Newline) :position iter))
     (dotimes (i count)
-      (insert *buffer*
+      (buffer-insert *buffer*
               (format nil "~a~%" (register-value (register-of *editor*)))
               :position iter))
     (text-iter-move iter :by :line :direction :backward)
     (update-cursor *buffer* iter)))
 
-(define-command w ()
+(define-command w (&optional file-name)
   (let ((*buffer* (current-buffer-of *editor*)))
-   (save-buffer *buffer*)))
+   (save-buffer *buffer* file-name)))
 
 (define-command undo (&optional (count *digit-argument*))
   (dotimes (i count)
@@ -272,7 +273,7 @@
     (source-buffer-redo *buffer*)))
 
 (define-command looking-at (regexp)
-  (ppcre:scan (str "^" regexp) (text-of *buffer*) :start (point *buffer*)))
+  (ppcre:scan (str "^" regexp) (text-of *buffer*) :start (point)))
 
 (define-command line-number-at-pos ()
   (text-iter-line (iter-at-mark *buffer*)))
@@ -305,7 +306,7 @@
     (collect-first
      (choose-if (lambda (x)
                   (not (ppcre:scan regexp text :start x :end (1+ x))))
-                (scan-range :from (point *buffer*) :below end)))))
+                (scan-range :from (point) :below end)))))
 
 (define-command eolp ()
   (text-iter-ends-line (iter-at-mark *buffer*)))
@@ -319,36 +320,34 @@
 
 (define-command forward-word (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))
-    (forward-skip-whitespace iter)
+    (iter-forward-skip-whitespace iter)
     (loop repeat count do
       (loop until (text-iter-is-end iter)
             with first-char = (text-iter-char iter)
             do (text-iter-move iter)
-            while (info.read-eval-print.editor.command:same-category-char
-                   first-char (text-iter-char iter)))
-      (forward-skip-whitespace iter))
+            while (same-category-char first-char (text-iter-char iter)))
+      (iter-forward-skip-whitespace iter))
     (update-cursor *buffer* iter)))
 
 (define-command forward-word* (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))
-    (forward-skip-whitespace iter)
+    (iter-forward-skip-whitespace iter)
     (dotimes (i count)
       (loop until (text-iter-is-end iter)
             do (text-iter-move iter)
             until (whitespace-p (text-iter-char iter)))
-      (forward-skip-whitespace iter))
+      (iter-forward-skip-whitespace iter))
     (update-cursor *buffer* iter)))
 
 (define-command end-of-word (&optional (count *digit-argument*))
   (let ((iter (iter-at-mark *buffer*)))
     (loop repeat count do
       (text-iter-move iter)
-      (forward-skip-whitespace iter)
+      (iter-forward-skip-whitespace iter)
       (loop until (text-iter-is-end iter)
             with first-char = (text-iter-char iter)
             do (text-iter-move iter)
-            while (or (info.read-eval-print.editor.command:same-category-char
-                       first-char (text-iter-char iter))
+            while (or (same-category-char first-char (text-iter-char iter))
                       (progn
                         (text-iter-move iter :direction :backward)
                         nil))))
@@ -358,7 +357,7 @@
   (let ((iter (iter-at-mark *buffer*)))
     (loop repeat count do
       (text-iter-move iter)
-      (forward-skip-whitespace iter)
+      (iter-forward-skip-whitespace iter)
       (loop until (text-iter-is-end iter)
             do (text-iter-move iter)
             until (and (whitespace-p (text-iter-char iter))
@@ -371,12 +370,11 @@
   (let ((iter (iter-at-mark *buffer*)))
     (loop repeat count do
       (text-iter-move iter :direction :backward)
-      (backward-skip-whitespace iter)
+      (iter-backward-skip-whitespace iter)
       (loop until (text-iter-is-start iter)
             with first-char = (text-iter-char iter)
             do (text-iter-move iter :direction :backward)
-            while (or (info.read-eval-print.editor.command:same-category-char
-                       first-char (text-iter-char iter))
+            while (or (same-category-char first-char (text-iter-char iter))
                       (progn
                         (text-iter-move iter)
                         nil))))
@@ -386,7 +384,7 @@
   (let ((iter (iter-at-mark *buffer*)))
     (loop repeat count do
       (text-iter-move iter :direction :backward)
-      (backward-skip-whitespace iter)
+      (iter-backward-skip-whitespace iter)
       (loop until (text-iter-is-start iter)
             do (text-iter-move iter :direction :backward)
             until (and (whitespace-p (text-iter-char iter))
@@ -397,12 +395,12 @@
 
 (define-command forward-skip-whitespace ()
   (let ((iter (iter-at-mark *buffer*)))
-    (forward-skip-whitespace iter)
+    (iter-forward-skip-whitespace iter)
     (update-cursor *buffer* iter)))
 
 (define-command backward-skip-whitespace ()
   (let ((iter (iter-at-mark *buffer*)))
-    (backward-skip-whitespace iter)
+    (iter-backward-skip-whitespace iter)
     (update-cursor *buffer* iter)))
 
 (define-command delete-indentation ()
@@ -419,17 +417,17 @@
   (define-command re-search-forward (regexp)
     (setf m nil)
     (let ((scanner (ppcre:create-scanner regexp :multi-line-mode t)))
-      (setf m (multiple-value-list (ppcre:scan scanner (text-of *buffer*) :start (point *buffer*))))))
+      (setf m (multiple-value-list (ppcre:scan scanner (text-of *buffer*) :start (point))))))
 
   (define-command re-search-backward (regexp)
     (setf m nil)
     (let ((scanner (ppcre:create-scanner (str "(?:.*)" regexp) :multi-line-mode t)))
-      (setf m (multiple-value-list (ppcre:scan scanner (text-of *buffer*) :end (point *buffer*))))))
+      (setf m (multiple-value-list (ppcre:scan scanner (text-of *buffer*) :end (point))))))
 
   (define-command match-string-no-properties (n)
     (ignore-errors
       (let ((g (nth (1+ n) m)))
-        (info.read-eval-print.editor.command::buffer-substring-no-properties
+        (buffer-substring-no-properties
          (aref g 0) (aref g 1))))))
 
 (define-command delete-line ()

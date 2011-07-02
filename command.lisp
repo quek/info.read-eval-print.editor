@@ -4,37 +4,30 @@
 (define-symbol-macro *digit-argument*
     (or (digit-argument-of *buffer*) 1))
 
-(eval-always
-  (defun command-intern (x)
-    (typecase x
-      (string (intern x :info.read-eval-print.editor.command))
-      (symbol (command-intern (symbol-name x)))
-      (cons (list 'setf (command-intern (cadr x)))))))
 
 (defmacro define-command (&whole form name &body body)
   (multiple-value-bind (layer-arg layer qualifiers args method-body)
       (contextl::parse-method-body form body)
     (declare (ignore layer-arg layer qualifiers method-body))
-    (let* ((name (command-intern name)))
-      `(progn
-         ,@(if (fboundp name)
-               (progn (layered-function-definer name)
-                      nil)
-               `((eval-always (export ',name :info.read-eval-print.editor.command))
-                 (define-layered-function ,name ,(let ((x (scan args)))
-                                                   (collect (if (consp x)
-                                                                (car x)
-                                                                x))))))
-         (define-layered-method ,name ,@body)))))
+    `(progn
+       (unless (ignore-errors (layered-function-definer ',name))
+         (eval-always
+           (import ',name :info.read-eval-print.editor.command)
+           (export ',name :info.read-eval-print.editor.command))
+         (define-layered-function ,name ,(let ((x (scan args)))
+                                           (collect (if (consp x)
+                                                        (car x)
+                                                        x)))))
+       (define-layered-method ,name ,@body))))
 
 (defmacro define-command-alias (command &rest aliases)
-  (let ((command (command-intern command)))
-    `(progn
-       ,@(let ((x (scan aliases)))
-           (collect `(progn
-                       (setf (fdefinition ',(command-intern x))
-                             (fdefinition ',command))
-                       (export ',(command-intern x) :info.read-eval-print.editor.command)))))))
+  `(progn
+     ,@(let ((x (scan aliases)))
+         (collect `(progn
+                     (setf (fdefinition ',x)
+                           (fdefinition ',command))
+                     (import ',x :info.read-eval-print.editor.command)
+                     (export ',x :info.read-eval-print.editor.command))))))
 
 (define-command command-mode ()
   (setf (mode-of *editor*) :command)
@@ -51,13 +44,13 @@
   (widget-grab-focus (current-frame-of *editor*)))
 
 (define-command a ()
-  (info.read-eval-print.editor.command::forward-char)
-  (info.read-eval-print.editor.command::i))
+  (forward-char)
+  (i))
 
 (define-command o ()
-  (info.read-eval-print.editor.command::end-of-line)
-  (insert *buffer* (string #\Newline))
-  (info.read-eval-print.editor.command::i))
+  (end-of-line)
+  (buffer-insert *buffer* (string #\Newline))
+  (i))
 
 (define-command e (path)
   (let* ((*frame* (current-frame-of *editor*))
@@ -70,6 +63,7 @@
 
 (define-command q ()
   (object-destroy (window-of *editor*)))
+(define-command-alias q quit)
 
 (define-command run-command ()
   ":e /tmp/a.txt"
@@ -77,29 +71,28 @@
          (splited (ppcre:split "\\s" input :start 1 :limit 2)))
     (awhen (find-symbol (string-upcase (car splited))
                         :info.read-eval-print.editor.command)
-      (info.read-eval-print.editor.command::normal-mode)
+      (normal-mode)
       (close-info-frame)
       (apply it (cdr splited)))))
 
 (define-command digit-argument-n (n)
   (setf (digit-argument-of *buffer*) n))
 
-(let ((*package* (find-package :info.read-eval-print.editor.command)))
-  (loop for i from 0 to 9
-        do (eval `(defun ,(sym 'info.read-eval-print.editor.command::digit-argument- i) ()
-                    (info.read-eval-print.editor.command::digit-argument-n ,i)))))
+(loop for i from 0 to 9
+      do (eval `(defun ,(sym 'digit-argument- i) ()
+                  (digit-argument-n ,i))))
 
 
-(define-command split ()
-  (window-split *editor* (current-frame-of *editor*))
+(define-command info.read-eval-print.editor.command::split ()
+  (editor-window-split *editor* (current-frame-of *editor*))
   (focus (current-frame-of *editor*)))
 
-(define-command vsplit ()
-  (window-vsplit *editor* (current-frame-of *editor*))
+(define-command info.read-eval-print.editor.command::vsplit ()
+  (editor-window-vsplit *editor* (current-frame-of *editor*))
   (focus (current-frame-of *editor*)))
 
-(define-command close ()
-  (window-close *editor* (current-frame-of *editor*))
+(define-command info.read-eval-print.editor.command::close ()
+  (editor-window-close *editor* (current-frame-of *editor*))
   (focus (current-frame-of *editor*)))
 
 
