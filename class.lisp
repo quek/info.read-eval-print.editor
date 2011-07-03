@@ -15,19 +15,19 @@
    (mode :normal :type (member :normal :insert :command))
    (register (make-instance 'register))))
 
-(defclass* frame (v-box)
+(defclass* frame (gtk:v-box)
   ((view :reader t)
    (status-view :reader t))
-  (:metaclass gobject-class))
+  (:metaclass gobject:gobject-class))
 
-(defclass* buffer (source-buffer)
+(defclass* buffer (gtk:source-buffer)
   ((frame)
    (name nil)
    (file nil)
    (digit-argument nil :accessor nil)
    (external-format :utf-8)
    (mode (make-instance 'mode)))
-  (:metaclass gobject-class))
+  (:metaclass gobject:gobject-class))
 
 (defclass* register ()
   ((places (make-hash-table :test #'eql))))

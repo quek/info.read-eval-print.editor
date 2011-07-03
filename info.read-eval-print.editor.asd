@@ -4,6 +4,7 @@
   :serial t
   :components ((:file "gtk-source-view")
                (:file "package")
+               (:file "start")
                (:file "util")
                (:file "special-variable")
                (:file "class")
@@ -16,9 +17,8 @@
                (:file "gui")
                (:file "fundamental-mode")
                (:file "common-lisp")
-               ;;(:file "cl-indent")
                (:file "common-lisp-indent")
-               )
+               (:file "end"))
   :depends-on (:cl-gtk2-gtk
                :cl-ppcre
                :cl-unicode

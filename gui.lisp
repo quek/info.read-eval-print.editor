@@ -9,25 +9,25 @@
   (declare (ignore args))
   (when buffer
     (setf (frame-of buffer) frame))
-  (connect-signal (view-of frame) "key-press-event" 'buffer-text-view-key-press-event-cb)
-  (connect-signal (view-of frame) "key-release-event" 'buffer-text-view-key-release-event-cb)
-  (connect-signal (view-of frame) "grab-focus" 'view-grab-focus-cb))
+  (gobject:connect-signal (view-of frame) "key-press-event" 'buffer-text-view-key-press-event-cb)
+  (gobject:connect-signal (view-of frame) "key-release-event" 'buffer-text-view-key-release-event-cb)
+  (gobject:connect-signal (view-of frame) "grab-focus" 'view-grab-focus-cb))
 
-(defmethod view-of ((text-view text-view))
+(defmethod view-of ((text-view gtk:text-view))
   text-view)
 
 (defmethod buffer-of ((frame frame))
-  (text-view-buffer (view-of frame)))
+  (gtk:text-view-buffer (view-of frame)))
 
 (defmethod (setf buffer-of) (buffer (frame frame))
   (setf (frame-of buffer) frame
-        (text-view-buffer (view-of frame)) buffer))
+        (gtk:text-view-buffer (view-of frame)) buffer))
 
 (defmethod status-text ((frame frame))
-  (text-buffer-text (text-view-buffer (status-view-of frame))))
+  (gtk:text-buffer-text (gtk:text-view-buffer (status-view-of frame))))
 
 (defmethod (setf status-text) (value (frame frame))
-  (setf (text-buffer-text (text-view-buffer (status-view-of frame)))
+  (setf (gtk:text-buffer-text (gtk:text-view-buffer (status-view-of frame)))
         (or value "")))
 
 (defmethod update-status ((frame frame))
@@ -38,23 +38,23 @@
                 (enabled-modes-of (mode-of (buffer-of frame))))))
 
 (defmethod focus ((frame frame))
-  (widget-grab-focus (view-of frame)))
+  (gtk:widget-grab-focus (view-of frame)))
 
 (defun make-frame (&key (buffer (make-instance 'buffer))
                      (show-line-numbers t))
-  (let ((view (make-instance 'source-view
+  (let ((view (make-instance 'gtk:source-view
                              :show-line-numbers show-line-numbers
                              :wrap-mode :char))
-        (status-view (make-instance 'source-view
+        (status-view (make-instance 'gtk:source-view
                                     :buffer (make-instance 'buffer)
                                     :wrap-mode :char)))
     (iterate ((x (scan (list view status-view))))
       (gtk::widget-modify-font x (pango::pango-font-description-from-string *defualt-font*)))
-    (let-ui (frame
+    (gtk:let-ui (frame
              :var f
              :view view
              :status-view status-view
-             (scrolled-window
+             (gtk:scrolled-window
               :hscrollbar-policy :automatic
               :vscrollbar-policy :automatic
               :shadow-type :etched-in
@@ -63,7 +63,7 @@
              :fill t
              (:expr status-view)
              :expand nil)
-      (let ((status-buffer (source-view-buffer status-view)))
+      (let ((status-buffer (gtk:source-view-buffer status-view)))
         (setf (buffer-of f) buffer
               (frame-of status-buffer) status-view
               (style-scheme buffer) *default-buffer-style-scheme*
@@ -124,8 +124,8 @@
 
 
 (defun event-key-to-keyseq (event-key)
-  (loop for x in (list* (event-key-keyval event-key)
-                        (event-key-state event-key))
+  (loop for x in (list* (gdk:event-key-keyval event-key)
+                        (gdk:event-key-state event-key))
         if (eq :control-mask x)
           collect :control
         else if (eq :mod1-mask x)
@@ -164,7 +164,7 @@
   nil)
 
 (defun view-grab-focus-cb (view)
-  (let ((frame (widget-parent (widget-parent view))))
+  (let ((frame (gtk:widget-parent (gtk:widget-parent view))))
     (setf (current-frame-of *editor*) frame
           (current-buffer-of *editor*) (buffer-of frame))))
 
@@ -185,17 +185,17 @@
   (labels ((f (x)
              (typecase x
                (frame (list (funcall function x)))
-               (t (loop for x in (container-children x)
+               (t (loop for x in (gtk:container-children x)
                         nconc (f x))))))
     (f (top-frame-of editor))))
 
 (defmethod editor-window-close ((editor editor) (frame frame))
   (when (closable-p editor)
-    (let ((parent (widget-parent frame)))
-      (container-remove parent frame)
+    (let ((parent (gtk:widget-parent frame)))
+      (gtk:container-remove parent frame)
       (setf (current-frame-of editor) (first-frame editor))
-      (when (null (container-children parent))
-        (container-remove (widget-parent parent) parent)))))
+      (when (null (gtk:container-children parent))
+        (gtk:container-remove (gtk:widget-parent parent) parent)))))
 
 (defun closable-p (editor)
   (let ((count 0))
@@ -205,7 +205,7 @@
                     (when (< 1 (incf count))
                       (return-from closable-p t)))
                  (t
-                    (loop for x in (container-children x)
+                    (loop for x in (gtk:container-children x)
                           thereis (f x))))))
       (f (top-frame-of editor)))))
 
@@ -214,7 +214,7 @@
              (typecase x
                (frame x)
                (t
-                  (loop for x in (container-children x)
+                  (loop for x in (gtk:container-children x)
                         thereis (f x))))))
     (f (top-frame-of editor))))
 
@@ -229,23 +229,23 @@
     (%editor-window-split views frame new-frame 'h-box)))
 
 (defgeneric %editor-window-split (wiews frame new-frame box-class)
-  (:method ((views container) frame new-frame box-class)
+  (:method ((views gtk:container) frame new-frame box-class)
     (labels ((f (fun other)
-               (container-remove views frame)
-               (when other (container-remove views other))
+               (gtk:container-remove views frame)
+               (when other (gtk:container-remove views other))
                (let ((new-box (make-instance box-class)))
-                 (box-pack-start new-box frame)
-                 (box-pack-start new-box new-frame)
+                 (gtk:box-pack-start new-box frame)
+                 (gtk:box-pack-start new-box new-frame)
                  (funcall fun views new-box)
                  (when other (funcall fun views other))
-                 (widget-show new-box))
+                 (gtk:widget-show new-box))
                t))
-      (let ((children (container-children views)))
+      (let ((children (gtk:container-children views)))
         ;; frame は car か cdr にいるはず。
         (cond ((eq frame (car children))
-               (f #'box-pack-start (cadr children)))
+               (f #'gtk:box-pack-start (cadr children)))
               ((eq frame (cadr children))
-               (f #'box-pack-end (car children)))
+               (f #'gtk:box-pack-end (car children)))
               (t
                (loop for x in children
                      thereis (%editor-window-split x frame new-frame box-class)))))))
@@ -257,88 +257,92 @@
   (%window-j (current-frame-of editor)))
 
 (defun %window-j (current)
-  (let ((parent (widget-parent current)))
+  (let ((parent (gtk:widget-parent current)))
     (typecase parent
-      (v-box (let* ((children (container-children parent))
-                    (car (car children))
-                    (cadr (cadr children)))
-               (if (eq car current)
-                   (typecase cadr
-                     (frame (focus cadr))
-                     ((or v-box h-box) (focus (find-depth-first-frame (container-children cadr)))))
-                   (%window-j parent))))
-      (h-box (%window-j parent)))))
+      (gtk:v-box (let* ((children (gtk:container-children parent))
+                        (car (car children))
+                        (cadr (cadr children)))
+                   (if (eq car current)
+                       (typecase cadr
+                         (frame (focus cadr))
+                         ((or gtk:v-box gtk:h-box)
+                          (focus (find-depth-first-frame (gtk:container-children cadr)))))
+                       (%window-j parent))))
+      (gtk:h-box (%window-j parent)))))
 
 
 (defun window-h (editor)
   (%window-h (current-frame-of editor)))
 
 (defun %window-h (current)
-  (let ((parent (widget-parent current)))
+  (let ((parent (gtk:widget-parent current)))
     (typecase parent
-      (h-box (let* ((children (container-children parent))
-                    (car (car children))
-                    (cadr (cadr children)))
-               (if (eq cadr current)
-                   (typecase car
-                     (frame (focus car))
-                     ((or v-box h-box) (focus (rfind-depth-first-frame (container-children car)))))
-                   (%window-h parent))))
-      (v-box (%window-h parent)))))
+      (gtk:h-box (let* ((children (gtk:container-children parent))
+                        (car (car children))
+                        (cadr (cadr children)))
+                   (if (eq cadr current)
+                       (typecase car
+                         (frame (focus car))
+                         ((or gtk:v-box gtk:h-box)
+                          (focus (rfind-depth-first-frame (gtk:container-children car)))))
+                       (%window-h parent))))
+      (gtk:v-box (%window-h parent)))))
 
 (defun window-k (editor)
   (%window-k (current-frame-of editor)))
 
 (defun %window-k (current)
-  (let ((parent (widget-parent current)))
+  (let ((parent (gtk:widget-parent current)))
     (typecase parent
-      (v-box (let* ((children (container-children parent))
-                    (car (car children))
-                    (cadr (cadr children)))
-               (if (eq cadr current)
-                   (typecase car
-                     (frame (focus car))
-                     ((or v-box h-box) (focus (rfind-depth-first-frame (container-children car)))))
-                   (%window-k parent))))
-      (h-box (%window-k parent)))))
+      (gtk:v-box (let* ((children (gtk:container-children parent))
+                        (car (car children))
+                        (cadr (cadr children)))
+                   (if (eq cadr current)
+                       (typecase car
+                         (frame (focus car))
+                         ((or gtk:v-box gtk:h-box)
+                          (focus (rfind-depth-first-frame (gtk:container-children car)))))
+                       (%window-k parent))))
+      (gtk:h-box (%window-k parent)))))
 
 (defun window-l (editor)
   (%window-l (current-frame-of editor)))
 
 (defun %window-l (current)
-  (let ((parent (widget-parent current)))
+  (let ((parent (gtk:widget-parent current)))
     (typecase parent
-      (h-box (let* ((children (container-children parent))
-                    (car (car children))
-                    (cadr (cadr children)))
-               (if (eq car current)
-                   (typecase cadr
-                     (frame (focus cadr))
-                     ((or v-box h-box) (focus (find-depth-first-frame (container-children cadr)))))
-                   (%window-l parent))))
-      (v-box (%window-l parent)))))
+      (gtk:h-box (let* ((children (gtk:container-children parent))
+                        (car (car children))
+                        (cadr (cadr children)))
+                   (if (eq car current)
+                       (typecase cadr
+                         (frame (focus cadr))
+                         ((or gtk:v-box gtk:h-box)
+                          (focus (find-depth-first-frame (gtk:container-children cadr)))))
+                       (%window-l parent))))
+      (gtk:v-box (%window-l parent)))))
 
 (defun find-depth-first-frame (list)
   (loop for i in list
         thereis (and (typep i 'frame) i)
-        thereis (find-depth-first-frame (container-children i))))
+        thereis (find-depth-first-frame (gtk:container-children i))))
 
 (defun rfind-depth-first-frame (list)
   (loop for i in (reverse list)
         thereis (and (typep i 'frame) i)
-        thereis (find-depth-first-frame (container-children i))))
+        thereis (find-depth-first-frame (gtk:container-children i))))
 
 (defun open-info-frame (&optional (text ""))
   (with-slots (info-frame) *editor*
-    (widget-show info-frame)
+    (gtk:widget-show info-frame)
     (setf (text-of (buffer-of info-frame)) text)))
 
 (defun close-info-frame ()
   (with-slots (info-frame) *editor*
-    (widget-hide info-frame)))
+    (gtk:widget-hide info-frame)))
 
 (defun message (message)
-  (setf (text-buffer-text (text-view-buffer (command-view-of *editor*)))
+  (setf (gtk:text-buffer-text (gtk:text-view-buffer (command-view-of *editor*)))
         (princ-to-string message)))
 
 (defvar *command-dispatch-table* (make-instance 'dispatch-table))
@@ -355,30 +359,30 @@
 
 
 (defun main ()
-  (with-main-loop
+  (gtk:with-main-loop
     (let ((frame (make-frame))
           (info-frame (make-frame :show-line-numbers nil)))
-      (let-ui (gtk-window
-               :type :toplevel
-               :position :center
-               :title "Editor"
-               :default-width 300
-               :default-height 400
-               :var window
-               (v-box
-                (v-box
-                 :var top-frame
-                 (:expr frame))
-                :expand t
-                :fill t
-                (:expr info-frame)
-                :expand t
-                :fill t
-                (source-view :var command-view
-                             :buffer (make-instance 'buffer :name "command buffer")
-                             :wrap-mode :char)
-                :expand nil))
-        (let ((cb (source-view-buffer command-view)))
+      (gtk:let-ui (gtk:gtk-window
+                   :type :toplevel
+                   :position :center
+                   :title "Editor"
+                   :default-width 300
+                   :default-height 400
+                   :var window
+                   (gtk:v-box
+                    (gtk:v-box
+                     :var top-frame
+                     (:expr frame))
+                    :expand t
+                    :fill t
+                    (:expr info-frame)
+                    :expand t
+                    :fill t
+                    (gtk:source-view :var command-view
+                                     :buffer (make-instance 'buffer :name "command buffer")
+                                     :wrap-mode :char)
+                    :expand nil))
+        (let ((cb (gtk:source-view-buffer command-view)))
           (setf (frame-of cb) command-view)
           (setf *editor* (make-instance 'editor
                                         :window window
@@ -388,16 +392,17 @@
                                         :buffers (list (buffer-of frame))
                                         :current-buffer (buffer-of frame)
                                         :command-view command-view
-                                        :command-buffer (source-view-buffer command-view))))
+                                        :command-buffer (gtk:source-view-buffer command-view))))
 
-        (connect-signal window "destroy" (lambda (w) (declare (ignore w)) (leave-gtk-main)))
-        (connect-signal command-view "key-press-event" 'command-text-view-key-press-event-cb)
-        (connect-signal command-view "key-release-event" 'command-text-view-key-release-event-cb)
+        (gobject:connect-signal window "destroy"
+                                (lambda (w) (declare (ignore w)) (gtk:leave-gtk-main)))
+        (gobject:connect-signal command-view "key-press-event" 'command-text-view-key-press-event-cb)
+        (gobject:connect-signal command-view "key-release-event" 'command-text-view-key-release-event-cb)
 
         (gtk::widget-modify-font command-view (pango::pango-font-description-from-string *defualt-font*))
 
-        (Widget-show window)
-        (widget-hide info-frame)))))
+        (gtk:widget-show window)
+        (gtk:widget-hide info-frame)))))
 
 (defmacro with-editor (&body body)
   `(let* ((*buffer* (current-buffer-of *editor*))

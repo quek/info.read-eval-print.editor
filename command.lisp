@@ -31,17 +31,17 @@
 
 (define-command command-mode ()
   (setf (mode-of *editor*) :command)
-  (setf (text-buffer-text (text-view-buffer (command-view-of *editor*))) ":")
-  (widget-grab-focus (command-view-of *editor*)))
+  (setf (gtk:text-buffer-text (gtk:text-view-buffer (command-view-of *editor*))) ":")
+  (gtk:widget-grab-focus (command-view-of *editor*)))
 
 (define-command normal-mode ()
   (setf (mode-of *editor*) :normal)
-  (setf (text-buffer-text (text-view-buffer (command-view-of *editor*))) "")
+  (setf (gtk:text-buffer-text (gtk:text-view-buffer (command-view-of *editor*))) "")
   (focus (current-frame-of *editor*)))
 
 (define-command i ()
   (setf (mode-of *editor*) :insert)
-  (widget-grab-focus (current-frame-of *editor*)))
+  (gtk:widget-grab-focus (current-frame-of *editor*)))
 
 (define-command a ()
   (forward-char)
@@ -62,7 +62,7 @@
 (define-command-alias e edit)
 
 (define-command q ()
-  (object-destroy (window-of *editor*)))
+  (gtk:object-destroy (window-of *editor*)))
 (define-command-alias q quit)
 
 (define-command run-command ()
@@ -98,7 +98,7 @@
 
 (define-command simple-completion ()
   (let* ((input (text-of *buffer*))
-         (pos (text-iter-offset (iter-at-mark *buffer*)))
+         (pos (gtk:text-iter-offset (iter-at-mark *buffer*)))
          (splited (ppcre:split "\\s" input :start 1)))
     (if (len=1 splited)
         ;; コマンドの補完
@@ -120,5 +120,5 @@
                                    (iterate ((file (scan files)))
                                      (format out "~a~%" file))))
                 (let ((iter (iter-at-mark *buffer*)))
-                  (setf (text-iter-offset iter) pos)
+                  (setf (gtk:text-iter-offset iter) pos)
                   (update-cursor *buffer* iter))))))))
