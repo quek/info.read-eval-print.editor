@@ -97,10 +97,11 @@
   (focus (current-frame-of *editor*)))
 
 (defun directory* (path)
-  (let ((pathname (pathname path)))
-    (if (pathname-type pathname)
-        (directory (str path "*"))
-        (directory (str path "*.*")))))
+  (remove-duplicates
+   (sort (append (directory (str path "*"))
+                 (directory (str path "*.*")))
+         #'string< :key #'namestring)
+   :test #'equal))
 
 (define-command simple-completion ()
   (let* ((input (text-of *buffer*))
