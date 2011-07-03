@@ -221,12 +221,12 @@
 (defmethod editor-window-split ((editor editor) frame &optional (buffer (buffer-of frame)))
   (let ((views (top-frame-of editor))
         (new-frame (make-frame :buffer buffer)))
-    (%editor-window-split views frame new-frame 'v-box)))
+    (%editor-window-split views frame new-frame 'gtk:v-box)))
 
 (defmethod editor-window-vsplit ((editor editor) frame &optional (buffer (buffer-of frame)))
   (let ((views (top-frame-of editor))
         (new-frame (make-frame :buffer buffer)))
-    (%editor-window-split views frame new-frame 'h-box)))
+    (%editor-window-split views frame new-frame 'gtk:h-box)))
 
 (defgeneric %editor-window-split (wiews frame new-frame box-class)
   (:method ((views gtk:container) frame new-frame box-class)

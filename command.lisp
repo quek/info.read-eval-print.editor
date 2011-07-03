@@ -75,6 +75,7 @@
       (close-info-frame)
       (apply it (cdr splited)))))
 
+
 (define-command digit-argument-n (n)
   (setf (digit-argument-of *buffer*) n))
 
@@ -95,6 +96,11 @@
   (editor-window-close *editor* (current-frame-of *editor*))
   (focus (current-frame-of *editor*)))
 
+(defun directory* (path)
+  (let ((pathname (pathname path)))
+    (if (pathname-type pathname)
+        (directory (str path "*"))
+        (directory (str path "*.*")))))
 
 (define-command simple-completion ()
   (let* ((input (text-of *buffer*))
@@ -105,20 +111,18 @@
         (let ((commands (car (swank:simple-completions (car splited) "info.read-eval-print.editor.command"))))
           (if (len=1 commands)
               (setf (text-of *buffer*) (str ":" (car commands)))
-              (open-info-frame (with-output-to-string (out)
-                                 (iterate ((x (scan commands)))
-                                   (format out "~a~%" x))))))
+              (open-info-frame (collect-append 'string
+                                               (format nil "~a~%" (scan commands))))))
         ;; きっとファイルの補完
         (let* ((butlast (butlast splited))
                (path (car (last splited)))
-               (files (directory (str path "*"))))
+               (files (directory* path)))
           (if (len=1 files)
               (setf (text-of *buffer*)
                     (format nil ":~{~a~^ ~}" `(,@butlast ,(car files))))
               (progn
-                (open-info-frame (with-output-to-string (out)
-                                   (iterate ((file (scan files)))
-                                     (format out "~a~%" file))))
+                (open-info-frame (collect-append 'string
+                                                 (format nil "~a~%" (scan files))))
                 (let ((iter (iter-at-mark *buffer*)))
                   (setf (gtk:text-iter-offset iter) pos)
                   (update-cursor *buffer* iter))))))))
