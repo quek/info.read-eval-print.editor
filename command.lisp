@@ -105,7 +105,6 @@
 
 (define-command simple-completion ()
   (let* ((input (text-of *buffer*))
-         (pos (gtk:text-iter-offset (iter-at-mark *buffer*)))
          (splited (ppcre:split "\\s" input :start 1)))
     (if (len=1 splited)
         ;; コマンドの補完
@@ -118,12 +117,21 @@
         (let* ((butlast (butlast splited))
                (path (car (last splited)))
                (files (directory* path)))
-          (if (len=1 files)
-              (setf (text-of *buffer*)
-                    (format nil ":~{~a~^ ~}" `(,@butlast ,(car files))))
-              (progn
-                (open-info-frame (collect-append 'string
-                                                 (format nil "~a~%" (scan files))))
-                (let ((iter (iter-at-mark *buffer*)))
-                  (setf (gtk:text-iter-offset iter) pos)
-                  (update-cursor *buffer* iter))))))))
+          (cond ((len=1 files)
+                 (setf (text-of *buffer*)
+                       (format nil ":~{~a~^ ~}" `(,@butlast ,(car files)))))
+                ((len>1 files)
+                 (progn
+                   (open-info-frame (collect-append 'string
+                                                    (format nil "~a~%" (scan files))))
+                   (let ((file (with-output-to-string (out)
+                                 (block nil
+                                   (apply #'map nil (lambda (&rest xs)
+                                                      (if (apply #'char= xs)
+                                                          (write-char (car xs) out)
+                                                          (return)))
+                                          (mapcar #'namestring files))))))
+                     (when (< (length path) (length file))
+                       (progn (setf (text-of *buffer*)
+                                    (format nil ":~{~a~^ ~}" `(,@butlast ,file))))))))
+                (t nil))))))

@@ -33,6 +33,9 @@
   (and (consp list)
        (null (cdr list))))
 
+(defun len>1 (list)
+  (consp (cdr list)))
+
 (defun ensure-list (x)
   (if (consp x)
       x
