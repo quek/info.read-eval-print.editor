@@ -85,7 +85,9 @@
                 (adjoin-layer layer context))
               (scan (enabled-modes-of mode))))
 
-(defun get-key-binding (mode keyseq &optional (editor-mode (mode-of *editor*)))
+(define-layered-function get-key-binding (mode keyseq editor-mode))
+
+(define-layered-method get-key-binding (mode keyseq editor-mode)
   (funcall-with-layer-context (mode-layer-context mode)
                               #'key-binding
                               mode

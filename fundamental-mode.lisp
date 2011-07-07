@@ -4,6 +4,15 @@
 
 (defvar *digit-argument-map* (make-instance 'key-map))
 
+(define-command self-insert-command ()
+  (values t t t))
+
+(define-layered-method get-key-binding :in fundamental-mode :around
+  (mode keyseq (editor-mode (eql :insert)))
+  (aif (call-next-layered-method)
+       it
+       #'self-insert-command))
+
 (define-command indent ()
   (insert "indent"))
 

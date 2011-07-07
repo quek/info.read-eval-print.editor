@@ -150,8 +150,9 @@
          (*buffer* (current-buffer-of *editor*))
          (mode (mode-of *buffer*)))
     (aif (get-key-binding mode keyseq (mode-of *editor*))
-         (progn (funcall-with-mode mode it)
-                t)
+         (multiple-value-bind (a b c) (funcall-with-mode mode it)
+           (declare (ignore a b))
+           (not c))
          (if (eq :normal (mode-of *editor*))
              ;; :normal モードでバインディングがないキーは無視。
              (constantly t)
