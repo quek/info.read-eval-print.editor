@@ -15,6 +15,7 @@
                (:file "buffer")
                (:file "mode")
                (:file "gui")
+               (:file "command-mode")
                (:file "fundamental-mode")
                (:file "common-lisp")
                (:file "common-lisp-indent")

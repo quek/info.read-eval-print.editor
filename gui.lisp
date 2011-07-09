@@ -71,56 +71,11 @@
         (update-status f)
         f))))
 
-
-
-(defgeneric dispatch-event (dispatch-table sender event))
-(defgeneric restore-dispatch-table (temporary-dispatch-table))
-
-(defclass* dispatch-table ()
-  ((table (make-hash-table :test #'equal))
-   (default nil)))
-
-(defclass* temporary-dispatch-table (dispatch-table)
-  ((dispatch-table-to-restore)
-   (mode)))
-
-(defmethod restore-dispatch-table ((self temporary-dispatch-table))
-  (setf (dispatch-table *editor* (mode-of self))
-        (dispatch-table-to-restore-of self)))
-
-
-(defmethod (setf dispatch-table) (dispatch-table editor mode)
-  (setf (cdr (assoc mode (dispatch-tables-of editor)))
-        dispatch-table))
-
-(defmethod dispatch-table (editor &optional (mode (mode-of editor)))
-  (cdr (assoc mode (dispatch-tables-of editor))))
-
-(defmethod dispatch-event ((dispatch-table dispatch-table) sender event-key)
-  (let ((key-seq (sort-keyseq (event-key-to-keyseq event-key))))
-    (awhen (gethash key-seq
-                    (table-of dispatch-table)
-                    (default-of dispatch-table))
-      (funcall it)
-      t)))
-
-(defmethod dispatch-event :around ((dispatch-table temporary-dispatch-table) sender event-key)
-  (aprog1 (call-next-method)
-    (when it
-      (restore-dispatch-table dispatch-table))))
-
 (defun sort-keyseq (keyseq)
   (sort (copy-seq keyseq)
         (lambda (a b)
           (string< (princ-to-string a)
                    (princ-to-string b)))))
-
-(defmethod set-command (dispatch-table keyseq command)
-  (loop for x in keyseq
-        if (and (keywordp x)
-                (not (member x '(:control :alt :shif :super :hyper))))
-          do (error "invalid keyseq ~a." keyseq))
-  (setf (gethash (sort-keyseq keyseq) (table-of dispatch-table)) command))
 
 
 (defun event-key-to-keyseq (event-key)
@@ -169,12 +124,17 @@
     (setf (current-frame-of *editor*) frame
           (current-buffer-of *editor*) (buffer-of frame))))
 
-;; event は nil を返すとデフォルトのイベントが実行される。
 (defun command-text-view-key-press-event-cb (command-text-view event-key)
-  (let ((dispatch-table (dispatch-table *editor*))
-        (*frame* command-text-view)
-        (*buffer* (command-buffer-of *editor*)))
-    (dispatch-event dispatch-table command-text-view event-key)))
+  (let* ((keyseq (sort-keyseq (event-key-to-keyseq event-key)))
+         (*frame* command-text-view)
+         (*buffer* (command-buffer-of *editor*))
+         (mode (mode-of *buffer*)))
+    (aif (get-key-binding mode keyseq :insert)
+         (multiple-value-bind (a b c) (funcall-with-mode mode it)
+           (declare (ignore a b))
+           (not c))
+         ;; event は nil を返すとデフォルトのイベントが実行される。
+         nil)))
 
 
 (defun command-text-view-key-release-event-cb (command-text-view event-key)
@@ -346,19 +306,6 @@
   (setf (gtk:text-buffer-text (gtk:text-view-buffer (command-view-of *editor*)))
         (princ-to-string message)))
 
-(defvar *command-dispatch-table* (make-instance 'dispatch-table))
-;; command
-(loop for (keyseq command)
-      in `(((:control #\c) normal-mode)
-           ((:control #\[) normal-mode)
-           ((#\Esc) normal-mode)
-           ((:control #\m) run-command)
-           ((#\Return) run-command)
-           ((:control #\i) simple-completion)
-           ((#\Tab) simple-completion))
-      do (set-command *command-dispatch-table* keyseq command))
-
-
 (defun main ()
   (gtk:with-main-loop
     (let ((frame (make-frame))
@@ -379,9 +326,13 @@
                     (:expr info-frame)
                     :expand t
                     :fill t
-                    (gtk:source-view :var command-view
-                                     :buffer (make-instance 'buffer :name "command buffer")
-                                     :wrap-mode :char)
+                    (gtk:source-view
+                     :var command-view
+                     :buffer (make-instance 'buffer
+                                            :name "command buffer"
+                                            :mode (make-instance 'mode
+                                                                 :enabled-modes (list 'command-mode)))
+                     :wrap-mode :char)
                     :expand nil))
         (let ((cb (gtk:source-view-buffer command-view)))
           (setf (frame-of cb) command-view)

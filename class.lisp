@@ -10,7 +10,6 @@
    (current-buffer)
    (command-buffer)
    (command-view)
-   (dispatch-tables `((:command . ,*command-dispatch-table*)))
    (command-key-bindings)
    (mode :normal :type (member :normal :insert :command))
    (register (make-instance 'register))))
