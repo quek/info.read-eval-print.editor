@@ -179,21 +179,27 @@
 
 (define-command complete-symbol ()
   (let* ((symbol (symbol-at-point))
-         (symbols (car (swank:simple-completions symbol (search-buffer-package)))))
+         (swank::*buffer-package* (find-package (or (search-buffer-package) *package*)))
+         (symbols (car (swank:fuzzy-completions symbol swank::*buffer-package*))))
     (if (len=1 symbols)
         (progn
           (let ((end (iter-at-mark *buffer*))
                 (start (iter-at-mark *buffer*)))
             (iter-backward-sexp start)
             (gtk:text-buffer-delete *buffer* start end)
-            (buffer-insert *buffer* (car symbols))))
-        (open-info-frame (with-output-to-string (out)
-                                 (iterate ((x (scan symbols)))
-                                   (format out "~a~%" x)))))))
+            (buffer-insert *buffer* (caar symbols)))
+          (disable-mode (mode-of *buffer*) 'common-lisp-complete-mode)
+          (close-info-frame))
+        (let ((max-width (collect-max (length (car (scan symbols))))))
+          (open-info-frame (with-output-to-string (out)
+                             (iterate ((x (scan symbols)))
+                               (format out "~va ~a~%" max-width (car x) (cadddr x)))))
+          (enable-mode (mode-of *buffer*) 'common-lisp-complete-mode)))))
 
 (define-command indent-and-complete-symbol ()
   (indent)
   (complete-symbol))
+
 
 (loop for (mode keyseq command)
       in `((:normal (:meta #\h) backward-sexp)
@@ -214,3 +220,13 @@
            (:insert (:control #\m) newline-and-indent)
            (:insert (#\Return) newline-and-indent))
       do (set-key *common-lisp-mode-map*  mode keyseq command))
+
+
+(define-mode common-lisp-complete-mode () ())
+
+(define-layered-method self-insert-command :in common-lisp-complete-mode :after (char)
+  (print "#$#@$#@$!$!$!@$#@$!")
+  (when (member char '(#\Space #\( #\) #\Return)
+                :test #'char=)
+    (disable-mode (mode-of *buffer*) 'common-lisp-complete-mode)
+    (close-info-frame)))

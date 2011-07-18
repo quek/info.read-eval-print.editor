@@ -4,14 +4,18 @@
 
 (defvar *digit-argument-map* (make-instance 'key-map))
 
-(define-command self-insert-command ()
-  (values t t t))
+
+(define-command self-insert-command (char)
+  (buffer-insert *buffer* (string char)))
+
 
 (define-layered-method get-key-binding :in fundamental-mode :around
   (mode keyseq (editor-mode (eql :insert)))
   (aif (call-next-layered-method)
        it
-       #'self-insert-command))
+       (lambda ()
+         (iterate ((char (choose-if #'characterp (scan keyseq))))
+           (self-insert-command char)))))
 
 (define-command indent ()
   (insert "indent"))
@@ -72,7 +76,9 @@
       do (set-key *fundamental-mode-map* :normal keyseq command))
 
 (loop for (keyseq command)
-      in `(((:control #\c) normal-mode)
+      in `(((#\Backspace) backward-delete-char)
+           ((#\Delete) delete-char)
+           ((:control #\c) normal-mode)
            ((:control #\[) normal-mode)
            ((#\Esc) normal-mode)
            ((:meta #\q) close-info-frame))

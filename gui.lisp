@@ -96,6 +96,10 @@
                               #\Esc)
                              ((= #.(gdk:keyval-from-name "Tab") x)
                               #\Tab)
+                             ((= #.(gdk:keyval-from-name "BackSpace") x)
+                              #\Backspace)
+                             ((= #.(gdk:keyval-from-name "Delete") x)
+                              #\Rubout)
                              (t (gdk:keyval-to-char x)))))
 
 
@@ -104,10 +108,8 @@
          (*frame* buffer-text-view)
          (*buffer* (current-buffer-of *editor*))
          (mode (mode-of *buffer*)))
-    (aif (get-key-binding mode keyseq (mode-of *editor*))
-         (multiple-value-bind (a b c) (funcall-with-mode mode it)
-           (declare (ignore a b))
-           (not c))
+    (aif (funcall-with-mode mode #'get-key-binding mode keyseq (mode-of *editor*))
+         (progn (funcall-with-mode mode it) t)
          (if (eq :normal (mode-of *editor*))
              ;; :normal モードでバインディングがないキーは無視。
              (constantly t)
@@ -130,9 +132,7 @@
          (*buffer* (command-buffer-of *editor*))
          (mode (mode-of *buffer*)))
     (aif (get-key-binding mode keyseq :insert)
-         (multiple-value-bind (a b c) (funcall-with-mode mode it)
-           (declare (ignore a b))
-           (not c))
+         (progn (funcall-with-mode mode it) t)
          ;; event は nil を返すとデフォルトのイベントが実行される。
          nil)))
 
