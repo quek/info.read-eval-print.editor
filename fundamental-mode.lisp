@@ -20,6 +20,8 @@
   (buffer-insert *buffer* (format nil "~%"))
   (indent))
 
+(define-command hide-info-frame ()
+  (close-info-frame))
 
 (loop for (keyseq command)
       in `(((#\0) digit-argument-0)
@@ -65,13 +67,15 @@
            ((#\y) ,(^ push-temp-key-map *fundamental-mode-map* *y-key-map*))
            ((:control #\w) ,(^ push-temp-key-map *fundamental-mode-map* *ctl-w-key-map*))
            ((#\") ,(^ push-temp-key-map *fundamental-mode-map* *register-key-map*))
-           ((#\=) indent))
+           ((#\=) indent)
+           ((:meta #\q) close-info-frame))
       do (set-key *fundamental-mode-map* :normal keyseq command))
 
 (loop for (keyseq command)
       in `(((:control #\c) normal-mode)
            ((:control #\[) normal-mode)
-           ((#\Esc) normal-mode))
+           ((#\Esc) normal-mode)
+           ((:meta #\q) close-info-frame))
       do (set-key *fundamental-mode-map* :insert keyseq command))
 
 (defvar *d-key-map* (make-instance 'key-map :inherits (list *digit-argument-map*)))
